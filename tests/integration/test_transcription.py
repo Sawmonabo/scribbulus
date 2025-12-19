@@ -7,8 +7,6 @@ They are skipped if dependencies are not available.
 from __future__ import annotations
 
 import shutil
-import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,41 +18,16 @@ from scribbulus.transcription.engine import (
     TranscriptionOutput,
     transcribe_file,
 )
+from scribbulus.utils.deps import (
+    is_cuda_available,
+    is_faster_whisper_available,
+    is_torch_available,
+)
 
 
 def ffmpeg_available() -> bool:
     """Check if ffmpeg is available."""
     return shutil.which("ffmpeg") is not None
-
-
-def faster_whisper_available() -> bool:
-    """Check if faster-whisper is available."""
-    try:
-        import faster_whisper
-
-        return True
-    except ImportError:
-        return False
-
-
-def torch_available() -> bool:
-    """Check if torch is available."""
-    try:
-        import torch
-
-        return True
-    except ImportError:
-        return False
-
-
-def cuda_available() -> bool:
-    """Check if CUDA is available."""
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
 
 
 # Skip markers
@@ -64,18 +37,23 @@ skip_if_no_ffmpeg = pytest.mark.skipif(
 )
 
 skip_if_no_whisper = pytest.mark.skipif(
-    not faster_whisper_available(),
+    not is_faster_whisper_available(),
     reason="faster-whisper not installed",
 )
 
 skip_if_no_torch = pytest.mark.skipif(
-    not torch_available(),
+    not is_torch_available(),
     reason="torch not installed",
+)
+
+skip_if_no_cuda = pytest.mark.skipif(
+    not is_cuda_available(),
+    reason="CUDA not available",
 )
 
 # Integration tests require all dependencies
 requires_full_setup = pytest.mark.skipif(
-    not (ffmpeg_available() and faster_whisper_available()),
+    not (ffmpeg_available() and is_faster_whisper_available()),
     reason="Requires ffmpeg and faster-whisper",
 )
 
@@ -136,7 +114,10 @@ class TestAudioPrepPipeline:
         if sample_wav is None:
             pytest.skip("Could not create sample WAV")
 
-        from scribbulus.transcription.chunking import AudioChunker, ChunkingConfig
+        from scribbulus.transcription.chunking import (
+            AudioChunker,
+            ChunkingConfig,
+        )
 
         config = ChunkingConfig(
             chunk_duration_sec=1.0,  # 1 second chunks for 3 second audio
@@ -322,24 +303,31 @@ class TestErrorRecovery:
 
         engine = TranscriptionEngine(config=config)
 
+        # Setup test file
+        dummy_file = temp_dir / "test.wav"
+        dummy_file.write_bytes(b"fake")
+
         # Simulate an error during transcription
-        with patch.object(engine, "_transcribe_full", side_effect=Exception("Test error")):
-            with pytest.raises(Exception):
-                dummy_file = temp_dir / "test.wav"
-                dummy_file.write_bytes(b"fake")
+        with (
+            patch.object(
+                engine,
+                "_transcribe_full",
+                side_effect=RuntimeError("Test error"),
+            ),
+            patch(
+                "scribbulus.transcription.engine.validate_input_file"
+            ) as mock_validate,
+            patch(
+                "scribbulus.transcription.engine.prepare_for_transcription"
+            ) as mock_prep,
+        ):
+            mock_info = MagicMock()
+            mock_info.duration = 10.0
+            mock_validate.return_value = mock_info
+            mock_prep.return_value = (dummy_file, False)
 
-                with patch(
-                    "scribbulus.transcription.engine.validate_input_file"
-                ) as mock_validate:
-                    mock_info = MagicMock()
-                    mock_info.duration = 10.0
-                    mock_validate.return_value = mock_info
-
-                    with patch(
-                        "scribbulus.transcription.engine.prepare_for_transcription"
-                    ) as mock_prep:
-                        mock_prep.return_value = (dummy_file, False)
-                        engine.transcribe(dummy_file)
+            with pytest.raises(RuntimeError, match="Test error"):
+                engine.transcribe(dummy_file)
 
         # Engine should have attempted cleanup
         assert engine._transcriber is None

@@ -10,6 +10,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from scribbulus.utils.deps import (
+    is_cuda_available,
+    is_faster_whisper_available,
+    is_torch_available,
+    is_whisperx_available,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
@@ -19,16 +26,6 @@ def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
-def cuda_available() -> bool:
-    """Check if CUDA is available."""
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
-
-
 # Skip markers
 skip_if_no_ffmpeg = pytest.mark.skipif(
     not ffmpeg_available(),
@@ -36,8 +33,23 @@ skip_if_no_ffmpeg = pytest.mark.skipif(
 )
 
 skip_if_no_cuda = pytest.mark.skipif(
-    not cuda_available(),
+    not is_cuda_available(),
     reason="CUDA not available",
+)
+
+skip_if_no_torch = pytest.mark.skipif(
+    not is_torch_available(),
+    reason="PyTorch not installed",
+)
+
+skip_if_no_faster_whisper = pytest.mark.skipif(
+    not is_faster_whisper_available(),
+    reason="faster-whisper not installed",
+)
+
+skip_if_no_whisperx = pytest.mark.skipif(
+    not is_whisperx_available(),
+    reason="whisperx not installed",
 )
 
 requires_ffmpeg = pytest.mark.skipif(
@@ -47,7 +59,7 @@ requires_ffmpeg = pytest.mark.skipif(
 
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir() -> Generator[Path]:
     """Create a temporary directory for test files."""
     with tempfile.TemporaryDirectory(prefix="scribbulus_test_") as tmpdir:
         yield Path(tmpdir)

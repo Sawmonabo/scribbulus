@@ -149,7 +149,9 @@ markers = [
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "venv"]
 skips = [
-  "B101"  # assert_used - acceptable in tests and dev code
+  "B101",  # assert_used - acceptable in tests and dev code
+  "B404",  # import_subprocess - required for ffmpeg/ffprobe execution
+  "B603"  # subprocess_without_shell_equals_true - ffmpeg calls use validated paths
 ]
 targets = ["src"]
 

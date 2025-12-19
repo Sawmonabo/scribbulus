@@ -6,13 +6,37 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from scribbulus.media.ffmpeg import get_audio_info, run_ffprobe
-from scribbulus.utils.errors import FFprobeError, NoAudioStreamError, UnsupportedFormatError
+from scribbulus.media.ffmpeg import run_ffprobe
+from scribbulus.utils.errors import (
+    FFprobeError,
+    NoAudioStreamError,
+    UnsupportedFormatError,
+)
 
 # Supported file extensions
-SUPPORTED_VIDEO: set[str] = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".flv", ".wmv"}
-SUPPORTED_AUDIO: set[str] = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus"}
+SUPPORTED_VIDEO: set[str] = {
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".avi",
+    ".webm",
+    ".flv",
+    ".wmv",
+}
+SUPPORTED_AUDIO: set[str] = {
+    ".wav",
+    ".mp3",
+    ".m4a",
+    ".flac",
+    ".ogg",
+    ".aac",
+    ".wma",
+    ".opus",
+}
 SUPPORTED_FORMATS: set[str] = SUPPORTED_VIDEO | SUPPORTED_AUDIO
+
+# Bytes per kilobyte for file size formatting
+_BYTES_PER_KB = 1024
 
 FileType = Literal["video", "audio"]
 
@@ -57,11 +81,8 @@ def get_file_extension(file_path: str | Path) -> str:
     """
     Get the lowercase file extension.
 
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        Lowercase file extension including the dot (e.g., ".mp4").
+    :param file_path: Path to the file.
+    :returns: Lowercase file extension including the dot (e.g., ".mp4").
     """
     return Path(file_path).suffix.lower()
 
@@ -70,11 +91,8 @@ def is_supported(file_path: str | Path) -> bool:
     """
     Check if a file format is supported.
 
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        True if the format is supported, False otherwise.
+    :param file_path: Path to the file.
+    :returns: True if the format is supported, False otherwise.
     """
     ext = get_file_extension(file_path)
     return ext in SUPPORTED_FORMATS
@@ -84,11 +102,8 @@ def is_video_format(file_path: str | Path) -> bool:
     """
     Check if a file is a video format (by extension).
 
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        True if the file has a video extension.
+    :param file_path: Path to the file.
+    :returns: True if the file has a video extension.
     """
     ext = get_file_extension(file_path)
     return ext in SUPPORTED_VIDEO
@@ -98,11 +113,8 @@ def is_audio_format(file_path: str | Path) -> bool:
     """
     Check if a file is an audio format (by extension).
 
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        True if the file has an audio extension.
+    :param file_path: Path to the file.
+    :returns: True if the file has an audio extension.
     """
     ext = get_file_extension(file_path)
     return ext in SUPPORTED_AUDIO
@@ -112,11 +124,8 @@ def get_file_type(file_path: str | Path) -> FileType | None:
     """
     Get the file type based on extension.
 
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        "video", "audio", or None if not supported.
+    :param file_path: Path to the file.
+    :returns: "video", "audio", or None if not supported.
     """
     ext = get_file_extension(file_path)
     if ext in SUPPORTED_VIDEO:
@@ -130,15 +139,10 @@ def probe_media_file(file_path: str | Path) -> MediaInfo:
     """
     Probe a media file and return detailed information.
 
-    Args:
-        file_path: Path to the media file.
-
-    Returns:
-        MediaInfo with file details.
-
-    Raises:
-        UnsupportedFormatError: If the file format is not supported.
-        FFprobeError: If ffprobe fails to analyze the file.
+    :param file_path: Path to the media file.
+    :returns: MediaInfo with file details.
+    :raises UnsupportedFormatError: If the file format is not supported.
+    :raises FFprobeError: If ffprobe fails to analyze the file.
     """
     file_path = Path(file_path)
 
@@ -180,7 +184,7 @@ def probe_media_file(file_path: str | Path) -> MediaInfo:
             audio_sample_rate = int(stream.get("sample_rate", 0)) or None
             audio_bit_rate = int(stream.get("bit_rate", 0)) or None
 
-            # Try to get duration from audio stream if format duration is missing
+            # Get duration from audio stream if format duration is missing
             if duration == 0 and "duration" in stream:
                 duration = float(stream["duration"])
 
@@ -207,22 +211,19 @@ def validate_input_file(file_path: str | Path) -> MediaInfo:
     """
     Validate an input file for transcription.
 
-    Args:
-        file_path: Path to the input file.
-
-    Returns:
-        MediaInfo if the file is valid.
-
-    Raises:
-        FileNotFoundError: If the file doesn't exist.
-        UnsupportedFormatError: If the format is not supported.
-        NoAudioStreamError: If the file has no audio.
+    :param file_path: Path to the input file.
+    :returns: MediaInfo if the file is valid.
+    :raises FileNotFoundError: If the file doesn't exist.
+    :raises UnsupportedFormatError: If the format is not supported.
+    :raises NoAudioStreamError: If the file has no audio.
     """
     file_path = Path(file_path)
 
     # Check file exists
     if not file_path.exists():
-        from scribbulus.utils.errors import FileNotFoundError
+        from scribbulus.utils.errors import (
+            FileNotFoundError,
+        )
 
         raise FileNotFoundError(str(file_path))
 
@@ -240,14 +241,12 @@ def format_file_size(size_bytes: int) -> str:
     """
     Format file size in human-readable format.
 
-    Args:
-        size_bytes: Size in bytes.
-
-    Returns:
-        Human-readable size string.
+    :param size_bytes: Size in bytes.
+    :returns: Human-readable size string.
     """
+    size: float = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:.1f} PB"
+        if size < _BYTES_PER_KB:
+            return f"{size:.1f} {unit}"
+        size /= _BYTES_PER_KB
+    return f"{size:.1f} PB"

@@ -2,33 +2,38 @@
 
 from __future__ import annotations
 
-import gc
+import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from types import TracebackType
+from typing import TYPE_CHECKING
 
-from scribbulus.media.audio_prep import cleanup_temp_file, prepare_for_transcription
+from scribbulus.media.audio_prep import (
+    cleanup_temp_file,
+    prepare_for_transcription,
+)
 from scribbulus.media.formats import MediaInfo, validate_input_file
 from scribbulus.transcription.chunking import (
+    AudioChunk,
     AudioChunker,
     ChunkingConfig,
     merge_chunk_segments,
     merge_transcription_text,
 )
 from scribbulus.transcription.diarization import (
-    DiarizedResult,
     SpeakerDiarizer,
     SpeakerSegment,
     format_diarized_transcript,
 )
 from scribbulus.transcription.whisper_backend import (
-    ModelSize,
     Segment,
     TranscriptionConfig,
     TranscriptionResult,
     WhisperTranscriber,
 )
-from scribbulus.utils.errors import TranscriptionError
+from scribbulus.utils.deps import cleanup_gpu_memory
+from scribbulus.utils.types import ComputeType, DeviceType, ModelSize
 
 if TYPE_CHECKING:
     pass
@@ -44,8 +49,8 @@ class EngineConfig:
 
     # Model settings
     model_size: ModelSize = "large-v3-turbo"
-    device: str = "auto"
-    compute_type: str | None = None
+    device: DeviceType = "auto"
+    compute_type: ComputeType | None = None
 
     # Transcription settings
     language: str | None = None  # None for auto-detect
@@ -86,12 +91,9 @@ class TranscriptionOutput:
         """
         Format the transcript for output.
 
-        Args:
-            include_speakers: Include speaker labels (if available).
-            include_timestamps: Include timestamps.
-
-        Returns:
-            Formatted transcript string.
+        :param include_speakers: Include speaker labels (if available).
+        :param include_timestamps: Include timestamps.
+        :returns: Formatted transcript string.
         """
         if self.has_diarization and include_speakers:
             return format_diarized_transcript(
@@ -139,10 +141,9 @@ class TranscriptionEngine:
         """
         Initialize the transcription engine.
 
-        Args:
-            config: Engine configuration.
-            progress_callback: Callback for progress updates.
-                              Called with (stage_name, progress_0_to_1).
+        :param config: Engine configuration.
+        :param progress_callback: Callback for progress updates.
+                                  Called with (stage_name, progress_0_to_1).
         """
         self.config = config or EngineConfig()
         self.progress_callback = progress_callback
@@ -158,17 +159,12 @@ class TranscriptionEngine:
         """
         Transcribe an audio or video file.
 
-        Args:
-            input_path: Path to the input file.
-
-        Returns:
-            TranscriptionOutput with transcript and metadata.
-
-        Raises:
-            FileNotFoundError: If input file doesn't exist.
-            UnsupportedFormatError: If format is not supported.
-            NoAudioStreamError: If file has no audio.
-            TranscriptionError: If transcription fails.
+        :param input_path: Path to the input file.
+        :returns: TranscriptionOutput with transcript and metadata.
+        :raises FileNotFoundError: If input file doesn't exist.
+        :raises UnsupportedFormatError: If format is not supported.
+        :raises NoAudioStreamError: If file has no audio.
+        :raises TranscriptionError: If transcription fails.
         """
         input_path = Path(input_path)
 
@@ -193,7 +189,9 @@ class TranscriptionEngine:
             )
 
             if use_chunking:
-                result = self._transcribe_chunked(prepared_path, media_info.duration)
+                result = self._transcribe_chunked(
+                    prepared_path, media_info.duration
+                )
             else:
                 result = self._transcribe_full(prepared_path)
 
@@ -201,7 +199,9 @@ class TranscriptionEngine:
 
             # Stage 4: Diarization (optional)
             speakers = None
-            final_segments: list[Segment] | list[SpeakerSegment] = result.segments
+            final_segments: list[Segment] | list[SpeakerSegment] = (
+                result.segments
+            )
 
             if self.config.enable_diarization and self.config.hf_token:
                 self._report_progress("Identifying speakers", 0.0)
@@ -216,13 +216,11 @@ class TranscriptionEngine:
                     speakers.sort()
                 except Exception as e:
                     # Diarization failed, continue without it
-                    import logging
-
                     logging.warning(f"Diarization failed: {e}")
                 self._report_progress("Identifying speakers", 1.0)
 
             # Build output
-            output = TranscriptionOutput(
+            return TranscriptionOutput(
                 text=result.text,
                 language=result.language,
                 duration=result.duration,
@@ -230,8 +228,6 @@ class TranscriptionEngine:
                 speakers=speakers,
                 media_info=media_info,
             )
-
-            return output
 
         finally:
             # Clean up temp file
@@ -280,7 +276,7 @@ class TranscriptionEngine:
         )
         chunker = AudioChunker(config=chunking_config)
 
-        chunk_results: list[tuple] = []
+        chunk_results: list[tuple[AudioChunk, list[Segment]]] = []
         detected_language = None
         total_chunks = chunker.get_chunk_count(audio_path)
 
@@ -288,7 +284,9 @@ class TranscriptionEngine:
             for i, chunk in enumerate(chunker.chunk_audio(audio_path)):
                 # Report progress
                 progress = (i + 1) / total_chunks
-                self._report_progress("Transcribing", progress * 0.9)  # Leave 10% for merging
+                self._report_progress(
+                    "Transcribing", progress * 0.9
+                )  # Leave 10% for merging
 
                 # Transcribe chunk
                 result = self._transcriber.transcribe(chunk.path, config)
@@ -346,27 +344,23 @@ class TranscriptionEngine:
             self._diarizer.unload_models()
             self._diarizer = None
 
-        # Force garbage collection
-        gc.collect()
+        cleanup_gpu_memory()
 
-        try:
-            import torch
-
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:
-            pass
-
-    def __enter__(self) -> "TranscriptionEngine":
+    def __enter__(self) -> TranscriptionEngine:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit."""
         self._cleanup()
 
 
-def transcribe_file(
+def transcribe_file(  # noqa: PLR0913 - convenience function with many options
     input_path: str | Path,
     *,
     model_size: ModelSize = "large-v3-turbo",
@@ -379,17 +373,14 @@ def transcribe_file(
     """
     Convenience function to transcribe a file.
 
-    Args:
-        input_path: Path to input file.
-        model_size: Whisper model size.
-        language: Language code (None for auto-detect).
-        enable_diarization: Enable speaker diarization.
-        hf_token: HuggingFace token for diarization.
-        num_speakers: Number of speakers (if known).
-        progress_callback: Progress callback function.
-
-    Returns:
-        TranscriptionOutput with transcript.
+    :param input_path: Path to input file.
+    :param model_size: Whisper model size.
+    :param language: Language code (None for auto-detect).
+    :param enable_diarization: Enable speaker diarization.
+    :param hf_token: HuggingFace token for diarization.
+    :param num_speakers: Number of speakers (if known).
+    :param progress_callback: Progress callback function.
+    :returns: TranscriptionOutput with transcript.
     """
     config = EngineConfig(
         model_size=model_size,
@@ -399,5 +390,7 @@ def transcribe_file(
         num_speakers=num_speakers,
     )
 
-    with TranscriptionEngine(config=config, progress_callback=progress_callback) as engine:
+    with TranscriptionEngine(
+        config=config, progress_callback=progress_callback
+    ) as engine:
         return engine.transcribe(input_path)

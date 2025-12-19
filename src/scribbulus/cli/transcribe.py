@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import sys
+import traceback
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import click
 
@@ -14,7 +16,6 @@ from scribbulus.transcription.engine import (
     TranscriptionEngine,
     TranscriptionOutput,
 )
-from scribbulus.transcription.whisper_backend import ModelSize
 from scribbulus.utils.errors import (
     FFmpegNotFoundError,
     NoAudioStreamError,
@@ -22,6 +23,7 @@ from scribbulus.utils.errors import (
     TranscriptionError,
     UnsupportedFormatError,
 )
+from scribbulus.utils.types import ComputeType, DeviceType
 
 if TYPE_CHECKING:
     pass
@@ -61,7 +63,11 @@ MODEL_CHOICES = [
 
 
 def setup_logging(verbose: bool) -> None:
-    """Configure logging based on verbosity."""
+    """
+    Configure logging based on verbosity.
+
+    :param verbose: Enable debug-level logging if True, warning-level if False.
+    """
     level = logging.DEBUG if verbose else logging.WARNING
     logging.basicConfig(
         level=level,
@@ -70,9 +76,14 @@ def setup_logging(verbose: bool) -> None:
     )
 
 
-def create_progress_callback(verbose: bool) -> callable:
-    """Create a progress callback function."""
-    last_stage = {"name": None}
+def create_progress_callback(verbose: bool) -> Callable[[str, float], None]:
+    """
+    Create a progress callback function.
+
+    :param verbose: Enable verbose progress output if True.
+    :returns: A callback function that accepts stage name and progress.
+    """
+    last_stage: dict[str, str | None] = {"name": None}
 
     def callback(stage: str, progress: float) -> None:
         if verbose:
@@ -108,7 +119,14 @@ def write_output(
     include_speakers: bool,
     include_timestamps: bool,
 ) -> None:
-    """Write transcription output to file or stdout."""
+    """
+    Write transcription output to file or stdout.
+
+    :param output: The transcription output to write.
+    :param output_path: Path to output file, or None to write to stdout.
+    :param include_speakers: Include speaker labels in the output.
+    :param include_timestamps: Include timestamps in the output.
+    """
     # Format the transcript
     transcript = output.format_transcript(
         include_speakers=include_speakers,
@@ -140,7 +158,7 @@ def write_output(
     "--language",
     type=str,
     default=None,
-    help="Language code (e.g., 'en', 'es', 'fr'). Auto-detects if not specified.",
+    help="Language code (e.g., 'en', 'es'). Auto-detects if not specified.",
 )
 @click.option(
     "--model",
@@ -174,14 +192,14 @@ def write_output(
     "--num-speakers",
     type=int,
     default=None,
-    help="Number of speakers (helps diarization accuracy). Auto-detects if not set.",
+    help="Number of speakers (improves accuracy). Auto-detects if not set.",
 )
 @click.option(
     "--hf-token",
     type=str,
     envvar="HF_TOKEN",
     default=None,
-    help="HuggingFace token for diarization models. Can also be set via HF_TOKEN env var.",
+    help="HuggingFace token for diarization. Also set via HF_TOKEN env var.",
 )
 @click.option(
     "--timestamps",
@@ -193,7 +211,7 @@ def write_output(
     "--no-speakers",
     is_flag=True,
     default=False,
-    help="Exclude speaker labels from output (even if diarization is enabled).",
+    help="Exclude speaker labels from output (even with diarization).",
 )
 @click.option(
     "--chunk-duration",
@@ -215,7 +233,7 @@ def write_output(
     help="Enable verbose output with progress details.",
 )
 @click.version_option(package_name="scribbulus")
-def main(
+def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click options
     input_path: Path,
     output_path: Path | None,
     language: str | None,
@@ -261,9 +279,9 @@ def main(
 
     # Build configuration
     config = EngineConfig(
-        model_size=model_size,  # type: ignore
-        device=device,
-        compute_type=compute_type,
+        model_size=model_size,  # type: ignore[arg-type]
+        device=cast(DeviceType, device),
+        compute_type=cast(ComputeType, compute_type) if compute_type else None,
         language=language,
         word_timestamps=True,
         enable_diarization=enable_diarization,
@@ -300,7 +318,7 @@ def main(
         click.echo(f"Duration: {_format_duration(output.duration)}", err=True)
         click.echo(f"Language: {output.language}", err=True)
 
-        if output.has_diarization:
+        if output.has_diarization and output.speakers:
             click.echo(f"Speakers: {len(output.speakers)} detected", err=True)
 
         # Write output
@@ -320,7 +338,7 @@ def main(
     except UnsupportedFormatError as e:
         click.echo(f"Error: {e}", err=True)
         click.echo(
-            "Supported formats: MP4, MOV, MKV, AVI, WebM, WAV, MP3, M4A, FLAC, OGG, AAC",
+            "Supported: MP4, MOV, MKV, AVI, WebM, WAV, MP3, M4A, FLAC, OGG",
             err=True,
         )
         sys.exit(EXIT_UNSUPPORTED_FORMAT)
@@ -355,14 +373,17 @@ def main(
     except Exception as e:
         click.echo(f"Unexpected error: {e}", err=True)
         if verbose:
-            import traceback
-
-            traceback.print_exc()
+            click.echo(f"\nTraceback:\n{traceback.format_exc()}", err=True)
         sys.exit(EXIT_ERROR)
 
 
 def _format_duration(seconds: float) -> str:
-    """Format duration as HH:MM:SS or MM:SS."""
+    """
+    Format duration as HH:MM:SS or MM:SS.
+
+    :param seconds: Duration in seconds.
+    :returns: Formatted duration string.
+    """
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)

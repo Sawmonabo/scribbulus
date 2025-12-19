@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Literal
+from types import TracebackType
 
+from scribbulus.utils.deps import (
+    cleanup_gpu_memory,
+    get_device,
+    get_faster_whisper_model,
+)
 from scribbulus.utils.errors import ModelNotFoundError, TranscriptionError
+from scribbulus.utils.types import ComputeType, DeviceType, ModelSize
 
-# Model size options
-ModelSize = Literal["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"]
-
-# Device options
-DeviceType = Literal["cuda", "cpu", "auto"]
-
-# Compute type options
-ComputeType = Literal["float16", "int8_float16", "int8", "float32"]
+# Audio samples for 30 seconds at 16kHz (used for language detection)
+_LANG_DETECT_SAMPLES = 480000
 
 
 @dataclass
@@ -88,10 +89,9 @@ class WhisperTranscriber:
         """
         Initialize the transcriber.
 
-        Args:
-            model_size: Whisper model size.
-            device: Device to use (cuda, cpu, or auto).
-            compute_type: Compute type for inference. If None, auto-selected.
+        :param model_size: Whisper model size.
+        :param device: Device to use (cuda, cpu, or auto).
+        :param compute_type: Compute type for inference. Auto-selected if None.
         """
         self.model_size = model_size
         self.device = device
@@ -103,23 +103,11 @@ class WhisperTranscriber:
         if self._model is not None:
             return
 
-        try:
-            from faster_whisper import WhisperModel
-        except ImportError as e:
-            raise ModelNotFoundError(
-                self.model_size,
-                "faster-whisper is not installed. Run: pip install faster-whisper",
-            ) from e
+        # Get model class (raises ModelNotFoundError if not installed)
+        whisper_model_cls = get_faster_whisper_model()
 
-        # Determine device
-        device = self.device
-        if device == "auto":
-            try:
-                import torch
-
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except ImportError:
-                device = "cpu"
+        # Determine device using centralized utility
+        device = get_device(self.device)
 
         # Determine compute type
         compute_type = self.compute_type
@@ -127,7 +115,7 @@ class WhisperTranscriber:
             compute_type = "float16" if device == "cuda" else "int8"
 
         try:
-            self._model = WhisperModel(
+            self._model = whisper_model_cls(
                 self.model_size,
                 device=device,
                 compute_type=compute_type,
@@ -143,18 +131,14 @@ class WhisperTranscriber:
         """
         Transcribe an audio file.
 
-        Args:
-            audio_path: Path to the audio file.
-            config: Transcription configuration.
-
-        Returns:
-            TranscriptionResult with segments and metadata.
-
-        Raises:
-            TranscriptionError: If transcription fails.
-            ModelNotFoundError: If the model cannot be loaded.
+        :param audio_path: Path to the audio file.
+        :param config: Transcription configuration.
+        :returns: TranscriptionResult with segments and metadata.
+        :raises TranscriptionError: If transcription fails.
+        :raises ModelNotFoundError: If the model cannot be loaded.
         """
         self._load_model()
+        assert self._model is not None  # Guaranteed by _load_model
         config = config or TranscriptionConfig()
 
         audio_path = Path(audio_path)
@@ -166,7 +150,9 @@ class WhisperTranscriber:
             vad_parameters = None
             if config.vad_filter:
                 vad_parameters = {
-                    "min_silence_duration_ms": config.vad_min_silence_duration_ms,
+                    "min_silence_duration_ms": (
+                        config.vad_min_silence_duration_ms
+                    ),
                 }
 
             # Run transcription
@@ -186,13 +172,19 @@ class WhisperTranscriber:
 
             for segment in segments_iter:
                 words = None
-                if config.word_timestamps and hasattr(segment, "words") and segment.words:
+                if (
+                    config.word_timestamps
+                    and hasattr(segment, "words")
+                    and segment.words
+                ):
                     words = [
                         Word(
                             word=word.word,
                             start=word.start,
                             end=word.end,
-                            probability=word.probability if hasattr(word, "probability") else 1.0,
+                            probability=word.probability
+                            if hasattr(word, "probability")
+                            else 1.0,
                         )
                         for word in segment.words
                     ]
@@ -221,7 +213,7 @@ class WhisperTranscriber:
         except Exception as e:
             if "CUDA" in str(e) or "cuda" in str(e):
                 raise TranscriptionError(
-                    f"CUDA error: {e}. Try using --device cpu or check CUDA installation."
+                    f"CUDA error: {e}. Try --device cpu or check CUDA setup."
                 ) from e
             raise TranscriptionError(str(e)) from e
 
@@ -236,17 +228,13 @@ class WhisperTranscriber:
         This is more memory-efficient for long files as segments are
         yielded one at a time.
 
-        Args:
-            audio_path: Path to the audio file.
-            config: Transcription configuration.
-
-        Yields:
-            Segment instances as they're transcribed.
-
-        Raises:
-            TranscriptionError: If transcription fails.
+        :param audio_path: Path to the audio file.
+        :param config: Transcription configuration.
+        :yields: Segment instances as they're transcribed.
+        :raises TranscriptionError: If transcription fails.
         """
         self._load_model()
+        assert self._model is not None  # Guaranteed by _load_model
         config = config or TranscriptionConfig()
 
         audio_path = Path(audio_path)
@@ -257,10 +245,12 @@ class WhisperTranscriber:
             vad_parameters = None
             if config.vad_filter:
                 vad_parameters = {
-                    "min_silence_duration_ms": config.vad_min_silence_duration_ms,
+                    "min_silence_duration_ms": (
+                        config.vad_min_silence_duration_ms
+                    ),
                 }
 
-            segments_iter, info = self._model.transcribe(
+            segments_iter, _info = self._model.transcribe(
                 str(audio_path),
                 language=config.language,
                 word_timestamps=config.word_timestamps,
@@ -272,13 +262,19 @@ class WhisperTranscriber:
 
             for segment in segments_iter:
                 words = None
-                if config.word_timestamps and hasattr(segment, "words") and segment.words:
+                if (
+                    config.word_timestamps
+                    and hasattr(segment, "words")
+                    and segment.words
+                ):
                     words = [
                         Word(
                             word=word.word,
                             start=word.start,
                             end=word.end,
-                            probability=word.probability if hasattr(word, "probability") else 1.0,
+                            probability=word.probability
+                            if hasattr(word, "probability")
+                            else 1.0,
                         )
                         for word in segment.words
                     ]
@@ -298,24 +294,18 @@ class WhisperTranscriber:
         if self._model is not None:
             del self._model
             self._model = None
+            cleanup_gpu_memory()
 
-            # Try to free GPU memory
-            try:
-                import gc
-
-                import torch
-
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-            except ImportError:
-                pass
-
-    def __enter__(self) -> "WhisperTranscriber":
+    def __enter__(self) -> WhisperTranscriber:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit - unload model."""
         self.unload_model()
 
@@ -329,24 +319,20 @@ def detect_language(
 
     Uses a smaller model by default for faster detection.
 
-    Args:
-        audio_path: Path to the audio file.
-        model_size: Model size to use for detection.
-
-    Returns:
-        Tuple of (language_code, probability).
+    :param audio_path: Path to the audio file.
+    :param model_size: Model size to use for detection.
+    :returns: Tuple of (language_code, probability).
     """
     with WhisperTranscriber(model_size=model_size) as transcriber:
         transcriber._load_model()
+        assert transcriber._model is not None  # Guaranteed by _load_model
 
         try:
-            from faster_whisper import WhisperModel
-
             # Load audio and detect language
             audio = transcriber._model.feature_extractor(str(audio_path))
             # Pad or trim to 30 seconds
-            if len(audio) > 480000:  # 30 seconds at 16kHz
-                audio = audio[:480000]
+            if len(audio) > _LANG_DETECT_SAMPLES:
+                audio = audio[:_LANG_DETECT_SAMPLES]
 
             # Detect language
             _, probs = transcriber._model.model.detect_language(audio)

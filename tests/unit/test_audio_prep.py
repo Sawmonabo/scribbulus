@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -15,8 +14,7 @@ from scribbulus.media.audio_prep import (
     extract_audio_from_video,
     prepare_for_transcription,
 )
-from scribbulus.utils.errors import AudioExtractionError, FFmpegNotFoundError
-
+from scribbulus.utils.errors import FFmpegNotFoundError
 from tests.conftest import requires_ffmpeg
 
 
@@ -25,12 +23,16 @@ class TestExtractAudioFromVideo:
 
     def test_raises_when_ffmpeg_not_found(self, temp_dir):
         """Should raise FFmpegNotFoundError when ffmpeg is not available."""
-        with patch("scribbulus.media.audio_prep.find_ffmpeg", return_value=None):
-            with pytest.raises(FFmpegNotFoundError):
-                extract_audio_from_video(
-                    temp_dir / "input.mp4",
-                    temp_dir / "output.wav",
-                )
+        with (
+            patch(
+                "scribbulus.media.audio_prep.find_ffmpeg", return_value=None
+            ),
+            pytest.raises(FFmpegNotFoundError),
+        ):
+            extract_audio_from_video(
+                temp_dir / "input.mp4",
+                temp_dir / "output.wav",
+            )
 
     @requires_ffmpeg
     def test_extract_from_sample_video(self, sample_video, temp_dir):
@@ -65,12 +67,16 @@ class TestConvertAudioToWav:
 
     def test_raises_when_ffmpeg_not_found(self, temp_dir):
         """Should raise FFmpegNotFoundError when ffmpeg is not available."""
-        with patch("scribbulus.media.audio_prep.find_ffmpeg", return_value=None):
-            with pytest.raises(FFmpegNotFoundError):
-                convert_audio_to_wav(
-                    temp_dir / "input.mp3",
-                    temp_dir / "output.wav",
-                )
+        with (
+            patch(
+                "scribbulus.media.audio_prep.find_ffmpeg", return_value=None
+            ),
+            pytest.raises(FFmpegNotFoundError),
+        ):
+            convert_audio_to_wav(
+                temp_dir / "input.mp3",
+                temp_dir / "output.wav",
+            )
 
     @requires_ffmpeg
     def test_convert_mp3_to_wav(self, sample_mp3, temp_dir):
@@ -85,7 +91,9 @@ class TestConvertAudioToWav:
         assert result.suffix == ".wav"
 
     @requires_ffmpeg
-    def test_convert_preserves_stereo_when_requested(self, sample_mp3, temp_dir):
+    def test_convert_preserves_stereo_when_requested(
+        self, sample_mp3, temp_dir
+    ):
         """Should preserve stereo when mono=False."""
         if sample_mp3 is None:
             pytest.skip("Could not create sample MP3")
@@ -125,7 +133,7 @@ class TestPrepareForTranscription:
             pytest.skip("Could not create sample WAV")
 
         # Our sample_wav is already 16kHz mono
-        prepared_path, is_temp = prepare_for_transcription(sample_wav)
+        prepared_path, _is_temp = prepare_for_transcription(sample_wav)
 
         # Should recognize it's already optimal
         # Note: This depends on _is_optimal_format working correctly
@@ -152,14 +160,18 @@ class TestExtractAudioChunk:
 
     def test_raises_when_ffmpeg_not_found(self, temp_dir):
         """Should raise FFmpegNotFoundError when ffmpeg is not available."""
-        with patch("scribbulus.media.audio_prep.find_ffmpeg", return_value=None):
-            with pytest.raises(FFmpegNotFoundError):
-                extract_audio_chunk(
-                    temp_dir / "input.wav",
-                    temp_dir / "chunk.wav",
-                    start_time=0.0,
-                    duration=10.0,
-                )
+        with (
+            patch(
+                "scribbulus.media.audio_prep.find_ffmpeg", return_value=None
+            ),
+            pytest.raises(FFmpegNotFoundError),
+        ):
+            extract_audio_chunk(
+                temp_dir / "input.wav",
+                temp_dir / "chunk.wav",
+                start_time=0.0,
+                duration=10.0,
+            )
 
     @requires_ffmpeg
     def test_extract_chunk_from_wav(self, sample_wav, temp_dir):
@@ -203,6 +215,8 @@ class TestCleanupTempFile:
         temp_file = temp_dir / "protected.wav"
         temp_file.write_bytes(b"data")
 
-        with patch.object(Path, "unlink", side_effect=OSError("Permission denied")):
+        with patch.object(
+            Path, "unlink", side_effect=OSError("Permission denied")
+        ):
             # Should not raise
             cleanup_temp_file(temp_file)

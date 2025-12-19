@@ -5,4 +5,4 @@ __author__ = "Scribbulus Team"
 
 from scribbulus.utils.errors import ScribbulusError
 
-__all__ = ["__version__", "ScribbulusError"]
+__all__ = ["ScribbulusError", "__version__"]

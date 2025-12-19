@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -131,9 +130,13 @@ class TestCLIIntegration:
         dummy_file.write_bytes(b"fake video content")
 
         # Mock the engine to avoid actual transcription
-        with patch("scribbulus.cli.transcribe.TranscriptionEngine") as mock_engine:
+        with patch(
+            "scribbulus.cli.transcribe.TranscriptionEngine"
+        ) as mock_engine:
             mock_instance = MagicMock()
-            mock_engine.return_value.__enter__ = MagicMock(return_value=mock_instance)
+            mock_engine.return_value.__enter__ = MagicMock(
+                return_value=mock_instance
+            )
             mock_engine.return_value.__exit__ = MagicMock(return_value=False)
 
             # Make transcribe raise to stop execution
@@ -149,9 +152,13 @@ class TestCLIIntegration:
         dummy_file = temp_dir / "test.mp4"
         dummy_file.write_bytes(b"fake video content")
 
-        with patch("scribbulus.cli.transcribe.TranscriptionEngine") as mock_engine:
+        with patch(
+            "scribbulus.cli.transcribe.TranscriptionEngine"
+        ) as mock_engine:
             mock_instance = MagicMock()
-            mock_engine.return_value.__enter__ = MagicMock(return_value=mock_instance)
+            mock_engine.return_value.__enter__ = MagicMock(
+                return_value=mock_instance
+            )
             mock_engine.return_value.__exit__ = MagicMock(return_value=False)
             mock_instance.transcribe.side_effect = Exception("Test stop")
 
@@ -165,13 +172,19 @@ class TestCLIIntegration:
         dummy_file = temp_dir / "test.mp4"
         dummy_file.write_bytes(b"fake video content")
 
-        with patch("scribbulus.cli.transcribe.TranscriptionEngine") as mock_engine:
+        with patch(
+            "scribbulus.cli.transcribe.TranscriptionEngine"
+        ) as mock_engine:
             mock_instance = MagicMock()
-            mock_engine.return_value.__enter__ = MagicMock(return_value=mock_instance)
+            mock_engine.return_value.__enter__ = MagicMock(
+                return_value=mock_instance
+            )
             mock_engine.return_value.__exit__ = MagicMock(return_value=False)
             mock_instance.transcribe.side_effect = Exception("Test stop")
 
-            result = runner.invoke(main, [str(dummy_file), "-v", "--no-diarization"])
+            result = runner.invoke(
+                main, [str(dummy_file), "-v", "--no-diarization"]
+            )
 
         # Verbose mode should show traceback on error
         assert result.exit_code != 0
@@ -200,9 +213,13 @@ class TestErrorHandling:
         dummy_file = temp_dir / "test.mp4"
         dummy_file.write_bytes(b"fake video")
 
-        with patch("scribbulus.cli.transcribe.TranscriptionEngine") as mock_engine:
+        with patch(
+            "scribbulus.cli.transcribe.TranscriptionEngine"
+        ) as mock_engine:
             mock_instance = MagicMock()
-            mock_engine.return_value.__enter__ = MagicMock(return_value=mock_instance)
+            mock_engine.return_value.__enter__ = MagicMock(
+                return_value=mock_instance
+            )
             mock_engine.return_value.__exit__ = MagicMock(return_value=False)
             mock_instance.transcribe.side_effect = KeyboardInterrupt()
 

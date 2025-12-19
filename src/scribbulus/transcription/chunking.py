@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import os
 import tempfile
-from dataclasses import dataclass, field
+from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
 
 from scribbulus.media.audio_prep import cleanup_temp_file, extract_audio_chunk
 from scribbulus.media.ffmpeg import get_audio_duration
-
-if TYPE_CHECKING:
-    from scribbulus.transcription.whisper_backend import Segment, TranscriptionResult
+from scribbulus.transcription.whisper_backend import Segment
 
 
 @dataclass
@@ -46,7 +44,9 @@ class ChunkingConfig:
         if self.overlap_sec < 0:
             raise ValueError("overlap_sec cannot be negative")
         if self.overlap_sec >= self.chunk_duration_sec:
-            raise ValueError("overlap_sec must be less than chunk_duration_sec")
+            raise ValueError(
+                "overlap_sec must be less than chunk_duration_sec"
+            )
 
 
 class AudioChunker:
@@ -65,12 +65,13 @@ class AudioChunker:
         """
         Initialize the chunker.
 
-        Args:
-            config: Chunking configuration.
-            temp_dir: Directory for temporary chunk files.
+        :param config: Chunking configuration.
+        :param temp_dir: Directory for temporary chunk files.
         """
         self.config = config or ChunkingConfig()
-        self.temp_dir = Path(temp_dir) if temp_dir else Path(tempfile.gettempdir())
+        self.temp_dir = (
+            Path(temp_dir) if temp_dir else Path(tempfile.gettempdir())
+        )
         self._active_chunks: list[Path] = []
 
     def chunk_audio(self, audio_path: str | Path) -> Iterator[AudioChunk]:
@@ -80,11 +81,8 @@ class AudioChunker:
         Uses ffmpeg to extract segments on-demand with fast seeking.
         Chunks are automatically cleaned up after yielding.
 
-        Args:
-            audio_path: Path to the audio file.
-
-        Yields:
-            AudioChunk instances for processing.
+        :param audio_path: Path to the audio file.
+        :returns: AudioChunk instances for processing.
         """
         audio_path = Path(audio_path)
         duration = get_audio_duration(audio_path)
@@ -160,11 +158,8 @@ class AudioChunker:
         """
         Calculate the number of chunks for an audio file.
 
-        Args:
-            audio_path: Path to the audio file.
-
-        Returns:
-            Number of chunks that will be generated.
+        :param audio_path: Path to the audio file.
+        :returns: Number of chunks that will be generated.
         """
         duration = get_audio_duration(audio_path)
         chunk_duration = self.config.chunk_duration_sec
@@ -175,7 +170,8 @@ class AudioChunker:
         if duration <= chunk_duration:
             return 1
 
-        # First chunk covers chunk_duration, subsequent chunks step by (chunk_duration - overlap)
+        # First chunk covers chunk_duration,
+        # subsequent chunks step by (chunk_duration - overlap)
         remaining = duration - chunk_duration
         additional_chunks = int(remaining / step)
         if remaining % step > 0:
@@ -185,25 +181,22 @@ class AudioChunker:
 
 
 def merge_chunk_segments(
-    chunk_segments: list[tuple[AudioChunk, list["Segment"]]],
+    chunk_segments: list[tuple[AudioChunk, list[Segment]]],
     overlap_threshold: float = 0.5,
-) -> list["Segment"]:
+) -> list[Segment]:
     """
     Merge transcription segments from multiple chunks.
 
     Handles overlap regions by deduplicating based on timestamps.
 
-    Args:
-        chunk_segments: List of (AudioChunk, segments) tuples.
-        overlap_threshold: Threshold for considering segments as duplicates.
-
-    Returns:
-        Merged list of segments with adjusted timestamps.
+    :param chunk_segments: List of (AudioChunk, segments) tuples.
+    :param overlap_threshold: Threshold for considering segments as duplicates.
+    :returns: Merged list of segments with adjusted timestamps.
     """
     if not chunk_segments:
         return []
 
-    merged_segments: list["Segment"] = []
+    merged_segments: list[Segment] = []
 
     for chunk, segments in chunk_segments:
         for segment in segments:
@@ -214,21 +207,22 @@ def merge_chunk_segments(
             # Check for overlap with existing segments
             is_duplicate = False
             for existing in merged_segments:
-                # Check if this segment overlaps significantly with an existing one
+                # Check if this segment overlaps significantly w/existing one
                 overlap_start = max(adjusted_start, existing.start)
                 overlap_end = min(adjusted_end, existing.end)
                 overlap_duration = max(0, overlap_end - overlap_start)
 
                 segment_duration = adjusted_end - adjusted_start
-                if segment_duration > 0 and overlap_duration / segment_duration > overlap_threshold:
+                if (
+                    segment_duration > 0
+                    and overlap_duration / segment_duration > overlap_threshold
+                ):
                     is_duplicate = True
                     break
 
             if not is_duplicate:
                 # Create new segment with adjusted timestamps
-                from scribbulus.transcription.whisper_backend import Segment as SegmentClass
-
-                adjusted_segment = SegmentClass(
+                adjusted_segment = Segment(
                     start=adjusted_start,
                     end=adjusted_end,
                     text=segment.text,
@@ -242,15 +236,14 @@ def merge_chunk_segments(
     return merged_segments
 
 
-def merge_transcription_text(segments: list["Segment"]) -> str:
+def merge_transcription_text(segments: list[Segment]) -> str:
     """
     Merge segment texts into a single transcript.
 
-    Args:
-        segments: List of segments.
-
-    Returns:
-        Merged transcript text.
+    :param segments: List of segments.
+    :returns: Merged transcript text.
     """
-    texts = [segment.text.strip() for segment in segments if segment.text.strip()]
+    texts = [
+        segment.text.strip() for segment in segments if segment.text.strip()
+    ]
     return " ".join(texts)

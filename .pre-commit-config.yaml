@@ -19,7 +19,6 @@ repos:
   - id: check-ast
     name: check python ast
   - id: check-case-conflict
-  - id: check-docstring-first
   - id: check-executables-have-shebangs
   - id: check-json
   - id: check-merge-conflict

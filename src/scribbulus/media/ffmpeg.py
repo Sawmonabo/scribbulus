@@ -11,6 +11,9 @@ from typing import Any
 
 from scribbulus.utils.errors import FFmpegNotFoundError, FFprobeError
 
+# Minimum parts in ffmpeg version output: "ffmpeg version X.X.X"
+_FFMPEG_VERSION_MIN_PARTS = 3
+
 
 @dataclass
 class FFmpegInfo:
@@ -24,8 +27,7 @@ def find_ffmpeg() -> Path | None:
     """
     Find the ffmpeg executable.
 
-    Returns:
-        Path to ffmpeg if found, None otherwise.
+    :returns: Path to ffmpeg if found, None otherwise.
     """
     ffmpeg_path = shutil.which("ffmpeg")
     if ffmpeg_path:
@@ -37,8 +39,7 @@ def find_ffprobe() -> Path | None:
     """
     Find the ffprobe executable.
 
-    Returns:
-        Path to ffprobe if found, None otherwise.
+    :returns: Path to ffprobe if found, None otherwise.
     """
     ffprobe_path = shutil.which("ffprobe")
     if ffprobe_path:
@@ -50,8 +51,7 @@ def check_ffmpeg_available() -> bool:
     """
     Check if ffmpeg is available on the system.
 
-    Returns:
-        True if ffmpeg is available, False otherwise.
+    :returns: True if ffmpeg is available, False otherwise.
     """
     return find_ffmpeg() is not None
 
@@ -60,8 +60,7 @@ def check_ffprobe_available() -> bool:
     """
     Check if ffprobe is available on the system.
 
-    Returns:
-        True if ffprobe is available, False otherwise.
+    :returns: True if ffprobe is available, False otherwise.
     """
     return find_ffprobe() is not None
 
@@ -70,8 +69,7 @@ def get_ffmpeg_version() -> str | None:
     """
     Get the version of ffmpeg.
 
-    Returns:
-        Version string if ffmpeg is found, None otherwise.
+    :returns: Version string if ffmpeg is found, None otherwise.
     """
     ffmpeg_path = find_ffmpeg()
     if not ffmpeg_path:
@@ -87,7 +85,7 @@ def get_ffmpeg_version() -> str | None:
         # Parse first line: "ffmpeg version X.X.X ..."
         first_line = result.stdout.split("\n")[0]
         parts = first_line.split()
-        if len(parts) >= 3 and parts[0] == "ffmpeg":
+        if len(parts) >= _FFMPEG_VERSION_MIN_PARTS and parts[0] == "ffmpeg":
             return parts[2]
         return first_line
     except subprocess.CalledProcessError:
@@ -98,11 +96,8 @@ def get_ffmpeg_info() -> FFmpegInfo:
     """
     Get information about the installed FFmpeg.
 
-    Returns:
-        FFmpegInfo with path and version.
-
-    Raises:
-        FFmpegNotFoundError: If ffmpeg is not found.
+    :returns: FFmpegInfo with path and version.
+    :raises FFmpegNotFoundError: If ffmpeg is not found.
     """
     ffmpeg_path = find_ffmpeg()
     if not ffmpeg_path:
@@ -116,15 +111,10 @@ def run_ffprobe(file_path: str | Path) -> dict[str, Any]:
     """
     Run ffprobe on a file and return the JSON output.
 
-    Args:
-        file_path: Path to the media file.
-
-    Returns:
-        Parsed JSON output from ffprobe.
-
-    Raises:
-        FFmpegNotFoundError: If ffprobe is not found.
-        FFprobeError: If ffprobe fails to analyze the file.
+    :param file_path: Path to the media file.
+    :returns: Parsed JSON output from ffprobe.
+    :raises FFmpegNotFoundError: If ffprobe is not found.
+    :raises FFprobeError: If ffprobe fails to analyze the file.
     """
     ffprobe_path = find_ffprobe()
     if not ffprobe_path:
@@ -152,25 +142,25 @@ def run_ffprobe(file_path: str | Path) -> dict[str, Any]:
             text=True,
             check=True,
         )
-        return json.loads(result.stdout)
+        data: dict[str, Any] = json.loads(result.stdout)
+        return data
     except subprocess.CalledProcessError as e:
-        raise FFprobeError(e.stderr.strip() or "Unknown error", str(file_path)) from e
+        raise FFprobeError(
+            e.stderr.strip() or "Unknown error", str(file_path)
+        ) from e
     except json.JSONDecodeError as e:
-        raise FFprobeError(f"Failed to parse ffprobe output: {e}", str(file_path)) from e
+        raise FFprobeError(
+            f"Failed to parse ffprobe output: {e}", str(file_path)
+        ) from e
 
 
 def get_audio_duration(file_path: str | Path) -> float:
     """
     Get the duration of an audio/video file in seconds.
 
-    Args:
-        file_path: Path to the media file.
-
-    Returns:
-        Duration in seconds.
-
-    Raises:
-        FFprobeError: If duration cannot be determined.
+    :param file_path: Path to the media file.
+    :returns: Duration in seconds.
+    :raises FFprobeError: If duration cannot be determined.
     """
     probe_data = run_ffprobe(file_path)
 
@@ -190,11 +180,8 @@ def has_audio_stream(file_path: str | Path) -> bool:
     """
     Check if a file has an audio stream.
 
-    Args:
-        file_path: Path to the media file.
-
-    Returns:
-        True if the file has an audio stream, False otherwise.
+    :param file_path: Path to the media file.
+    :returns: True if the file has an audio stream, False otherwise.
     """
     try:
         probe_data = run_ffprobe(file_path)
@@ -210,11 +197,8 @@ def get_audio_info(file_path: str | Path) -> dict[str, Any] | None:
     """
     Get information about the audio stream in a file.
 
-    Args:
-        file_path: Path to the media file.
-
-    Returns:
-        Dictionary with audio stream info, or None if no audio stream.
+    :param file_path: Path to the media file.
+    :returns: Dictionary with audio stream info, or None if no audio stream.
     """
     probe_data = run_ffprobe(file_path)
 
@@ -243,19 +227,14 @@ def run_ffmpeg(
     """
     Run ffmpeg with the given arguments.
 
-    Args:
-        args: Arguments to pass to ffmpeg (not including 'ffmpeg' itself).
-        check: Raise exception on non-zero exit code.
-        capture_output: Capture stdout and stderr.
-        timeout: Timeout in seconds.
-
-    Returns:
-        CompletedProcess instance.
-
-    Raises:
-        FFmpegNotFoundError: If ffmpeg is not found.
-        subprocess.CalledProcessError: If check=True and ffmpeg returns non-zero.
-        subprocess.TimeoutExpired: If timeout is exceeded.
+    :param args: Arguments to pass to ffmpeg (not including 'ffmpeg' itself).
+    :param check: Raise exception on non-zero exit code.
+    :param capture_output: Capture stdout and stderr.
+    :param timeout: Timeout in seconds.
+    :returns: CompletedProcess instance.
+    :raises FFmpegNotFoundError: If ffmpeg is not found.
+    :raises subprocess.CalledProcessError: If check=True and non-zero exit.
+    :raises subprocess.TimeoutExpired: If timeout is exceeded.
     """
     ffmpeg_path = find_ffmpeg()
     if not ffmpeg_path:

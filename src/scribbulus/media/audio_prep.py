@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import atexit
 import os
-import signal
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from scribbulus.media.ffmpeg import find_ffmpeg, get_audio_duration, run_ffmpeg
-from scribbulus.media.formats import MediaInfo, is_video_format, probe_media_file
+from scribbulus.media.ffmpeg import find_ffmpeg, run_ffmpeg
+from scribbulus.media.formats import (
+    is_video_format,
+    probe_media_file,
+)
 from scribbulus.utils.errors import AudioExtractionError, FFmpegNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    pass
 
 # Track temp files for cleanup
 _temp_files: list[Path] = []
@@ -35,12 +37,20 @@ atexit.register(_cleanup_temp_files)
 
 
 def _register_temp_file(path: Path) -> None:
-    """Register a temp file for cleanup."""
+    """
+    Register a temp file for cleanup.
+
+    :param path: Path to the temporary file.
+    """
     _temp_files.append(path)
 
 
 def _unregister_temp_file(path: Path) -> None:
-    """Unregister a temp file after successful processing."""
+    """
+    Unregister a temp file after successful processing.
+
+    :param path: Path to the temporary file.
+    """
     if path in _temp_files:
         _temp_files.remove(path)
 
@@ -56,19 +66,14 @@ def extract_audio_from_video(
     """
     Extract audio from a video file.
 
-    Args:
-        input_path: Path to the input video file.
-        output_path: Path for the output audio file.
-        sample_rate: Target sample rate (default: 16000 Hz for STT).
-        mono: Convert to mono (default: True for STT).
-        overwrite: Overwrite existing output file.
-
-    Returns:
-        Path to the extracted audio file.
-
-    Raises:
-        FFmpegNotFoundError: If ffmpeg is not found.
-        AudioExtractionError: If extraction fails.
+    :param input_path: Path to the input video file.
+    :param output_path: Path for the output audio file.
+    :param sample_rate: Target sample rate (default: 16000 Hz for STT).
+    :param mono: Convert to mono (default: True for STT).
+    :param overwrite: Overwrite existing output file.
+    :returns: Path to the extracted audio file.
+    :raises FFmpegNotFoundError: If ffmpeg is not found.
+    :raises AudioExtractionError: If extraction fails.
     """
     if not find_ffmpeg():
         raise FFmpegNotFoundError()
@@ -98,12 +103,14 @@ def extract_audio_from_video(
     args.append(str(output_path))
 
     try:
-        result = run_ffmpeg(args, check=True)
+        run_ffmpeg(args, check=True)
     except Exception as e:
         raise AudioExtractionError(str(e), str(input_path)) from e
 
     if not output_path.exists():
-        raise AudioExtractionError("Output file was not created", str(input_path))
+        raise AudioExtractionError(
+            "Output file was not created", str(input_path)
+        )
 
     return output_path
 
@@ -119,19 +126,14 @@ def convert_audio_to_wav(
     """
     Convert any audio file to WAV format optimized for STT.
 
-    Args:
-        input_path: Path to the input audio file.
-        output_path: Path for the output WAV file.
-        sample_rate: Target sample rate (default: 16000 Hz).
-        mono: Convert to mono (default: True).
-        overwrite: Overwrite existing output file.
-
-    Returns:
-        Path to the converted WAV file.
-
-    Raises:
-        FFmpegNotFoundError: If ffmpeg is not found.
-        AudioExtractionError: If conversion fails.
+    :param input_path: Path to the input audio file.
+    :param output_path: Path for the output WAV file.
+    :param sample_rate: Target sample rate (default: 16000 Hz).
+    :param mono: Convert to mono (default: True).
+    :param overwrite: Overwrite existing output file.
+    :returns: Path to the converted WAV file.
+    :raises FFmpegNotFoundError: If ffmpeg is not found.
+    :raises AudioExtractionError: If conversion fails.
     """
     if not find_ffmpeg():
         raise FFmpegNotFoundError()
@@ -159,12 +161,14 @@ def convert_audio_to_wav(
     args.append(str(output_path))
 
     try:
-        result = run_ffmpeg(args, check=True)
+        run_ffmpeg(args, check=True)
     except Exception as e:
         raise AudioExtractionError(str(e), str(input_path)) from e
 
     if not output_path.exists():
-        raise AudioExtractionError("Output file was not created", str(input_path))
+        raise AudioExtractionError(
+            "Output file was not created", str(input_path)
+        )
 
     return output_path
 
@@ -181,19 +185,14 @@ def prepare_for_transcription(
 
     Converts the input to 16kHz mono WAV format if needed.
 
-    Args:
-        input_path: Path to the input file (audio or video).
-        output_dir: Directory for temp files (default: system temp).
-        sample_rate: Target sample rate (default: 16000 Hz).
-        mono: Convert to mono (default: True).
-
-    Returns:
-        Tuple of (prepared_audio_path, is_temporary).
+    :param input_path: Path to the input file (audio or video).
+    :param output_dir: Directory for temp files (default: system temp).
+    :param sample_rate: Target sample rate (default: 16000 Hz).
+    :param mono: Convert to mono (default: True).
+    :returns: Tuple of (prepared_audio_path, is_temporary).
         If is_temporary is True, the caller should delete the file when done.
-
-    Raises:
-        FFmpegNotFoundError: If ffmpeg is not found.
-        AudioExtractionError: If preparation fails.
+    :raises FFmpegNotFoundError: If ffmpeg is not found.
+    :raises AudioExtractionError: If preparation fails.
     """
     input_path = Path(input_path)
 
@@ -258,15 +257,12 @@ def _is_optimal_format(
             return False
 
         # Check channels
-        if mono and media_info.audio_channels != 1:
-            return False
-
-        return True
+        return not (mono and media_info.audio_channels != 1)
     except Exception:
         return False
 
 
-def extract_audio_chunk(
+def extract_audio_chunk(  # noqa: PLR0913 - all args are needed for chunk extraction
     input_path: str | Path,
     output_path: str | Path,
     start_time: float,
@@ -280,19 +276,14 @@ def extract_audio_chunk(
 
     Uses seeking before input for memory-efficient extraction.
 
-    Args:
-        input_path: Path to the input file.
-        output_path: Path for the output chunk.
-        start_time: Start time in seconds.
-        duration: Duration in seconds.
-        sample_rate: Target sample rate.
-        mono: Convert to mono.
-
-    Returns:
-        Path to the extracted chunk.
-
-    Raises:
-        AudioExtractionError: If extraction fails.
+    :param input_path: Path to the input file.
+    :param output_path: Path for the output chunk.
+    :param start_time: Start time in seconds.
+    :param duration: Duration in seconds.
+    :param sample_rate: Target sample rate.
+    :param mono: Convert to mono.
+    :returns: Path to the extracted chunk.
+    :raises AudioExtractionError: If extraction fails.
     """
     if not find_ffmpeg():
         raise FFmpegNotFoundError()
@@ -343,8 +334,7 @@ def cleanup_temp_file(file_path: Path) -> None:
     """
     Clean up a temporary file.
 
-    Args:
-        file_path: Path to the file to delete.
+    :param file_path: Path to the file to delete.
     """
     try:
         if file_path.exists():

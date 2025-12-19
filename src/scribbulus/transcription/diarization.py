@@ -5,12 +5,15 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from types import TracebackType
+from typing import TYPE_CHECKING, Any
 
+from scribbulus.utils.deps import cleanup_gpu_memory, get_device, get_whisperx
 from scribbulus.utils.errors import DiarizationError, HuggingFaceTokenError
+from scribbulus.utils.types import DeviceType, ResolvedDeviceType
 
 if TYPE_CHECKING:
-    from scribbulus.transcription.whisper_backend import Segment, TranscriptionResult
+    from scribbulus.transcription.whisper_backend import Segment
 
 
 @dataclass
@@ -21,7 +24,7 @@ class SpeakerSegment:
     end: float
     text: str
     speaker: str
-    words: list | None = None
+    words: list[Any] | None = None
 
     @property
     def duration(self) -> float:
@@ -60,32 +63,23 @@ class SpeakerDiarizer:
     def __init__(
         self,
         hf_token: str | None = None,
-        device: str = "auto",
+        device: DeviceType = "auto",
     ) -> None:
         """
         Initialize the diarizer.
 
-        Args:
-            hf_token: HuggingFace token for pyannote models.
-                      Falls back to HF_TOKEN environment variable.
-            device: Device to use (cuda, cpu, or auto).
+        :param hf_token: HuggingFace token for pyannote models.
+                         Falls back to HF_TOKEN environment variable.
+        :param device: Device to use (cuda, cpu, or auto).
         """
         self.hf_token = hf_token or os.environ.get("HF_TOKEN")
         self.device = device
         self._diarize_model = None
         self._align_model = None
 
-    def _get_device(self) -> str:
+    def _get_device(self) -> ResolvedDeviceType:
         """Get the actual device to use."""
-        if self.device != "auto":
-            return self.device
-
-        try:
-            import torch
-
-            return "cuda" if torch.cuda.is_available() else "cpu"
-        except ImportError:
-            return "cpu"
+        return get_device(self.device)
 
     def _load_diarize_model(self) -> None:
         """Load the diarization pipeline lazily."""
@@ -95,12 +89,8 @@ class SpeakerDiarizer:
         if not self.hf_token:
             raise HuggingFaceTokenError()
 
-        try:
-            import whisperx
-        except ImportError as e:
-            raise DiarizationError(
-                "whisperx is not installed. Run: pip install whisperx"
-            ) from e
+        # Get whisperx module (raises DiarizationError if not installed)
+        whisperx = get_whisperx()
 
         try:
             device = self._get_device()
@@ -116,12 +106,14 @@ class SpeakerDiarizer:
                     "Make sure you've accepted the model terms at "
                     "https://huggingface.co/pyannote/speaker-diarization-3.1"
                 ) from e
-            raise DiarizationError(f"Failed to load diarization model: {e}") from e
+            raise DiarizationError(
+                f"Failed to load diarization model: {e}"
+            ) from e
 
-    def diarize(
+    def diarize(  # noqa: PLR0913 - diarization requires multiple speaker params
         self,
         audio_path: str | Path,
-        transcription_segments: list["Segment"],
+        transcription_segments: list[Segment],
         language: str = "en",
         num_speakers: int | None = None,
         min_speakers: int | None = None,
@@ -130,34 +122,27 @@ class SpeakerDiarizer:
         """
         Add speaker labels to transcription segments.
 
-        Args:
-            audio_path: Path to the audio file.
-            transcription_segments: Segments from transcription.
-            language: Language code for alignment.
-            num_speakers: Exact number of speakers (if known).
-            min_speakers: Minimum number of speakers.
-            max_speakers: Maximum number of speakers.
-
-        Returns:
-            List of SpeakerSegment with speaker labels.
-
-        Raises:
-            DiarizationError: If diarization fails.
-            HuggingFaceTokenError: If HF token is missing.
+        :param audio_path: Path to the audio file.
+        :param transcription_segments: Segments from transcription.
+        :param language: Language code for alignment.
+        :param num_speakers: Exact number of speakers (if known).
+        :param min_speakers: Minimum number of speakers.
+        :param max_speakers: Maximum number of speakers.
+        :returns: List of SpeakerSegment with speaker labels.
+        :raises DiarizationError: If diarization fails.
+        :raises HuggingFaceTokenError: If HF token is missing.
         """
         self._load_diarize_model()
+        assert (
+            self._diarize_model is not None
+        )  # Guaranteed by _load_diarize_model
 
         audio_path = Path(audio_path)
         if not audio_path.exists():
             raise DiarizationError(f"Audio file not found: {audio_path}")
 
-        try:
-            import whisperx
-        except ImportError as e:
-            raise DiarizationError(
-                "whisperx is not installed. Run: pip install whisperx"
-            ) from e
-
+        # Get whisperx module (raises DiarizationError if not installed)
+        whisperx = get_whisperx()
         device = self._get_device()
 
         try:
@@ -226,7 +211,7 @@ class SpeakerDiarizer:
             if "CUDA" in str(e) or "cuda" in str(e):
                 raise DiarizationError(
                     f"CUDA error during diarization: {e}. "
-                    "Try running without diarization or check CUDA installation."
+                    "Try without diarization or check CUDA installation."
                 ) from e
             raise DiarizationError(str(e)) from e
 
@@ -240,22 +225,18 @@ class SpeakerDiarizer:
             del self._align_model
             self._align_model = None
 
-        try:
-            import gc
+        cleanup_gpu_memory()
 
-            import torch
-
-            gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:
-            pass
-
-    def __enter__(self) -> "SpeakerDiarizer":
+    def __enter__(self) -> SpeakerDiarizer:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit - unload models."""
         self.unload_models()
 
@@ -267,12 +248,9 @@ def format_diarized_transcript(
     """
     Format diarized segments into a readable transcript.
 
-    Args:
-        segments: List of speaker segments.
-        include_timestamps: Include timestamps in output.
-
-    Returns:
-        Formatted transcript string.
+    :param segments: List of speaker segments.
+    :param include_timestamps: Include timestamps in output.
+    :returns: Formatted transcript string.
     """
     if not segments:
         return ""
@@ -285,7 +263,9 @@ def format_diarized_transcript(
         if segment.speaker != current_speaker:
             current_speaker = segment.speaker
             if include_timestamps:
-                lines.append(f"\n[{current_speaker}] ({_format_time(segment.start)})")
+                lines.append(
+                    f"\n[{current_speaker}] ({_format_time(segment.start)})"
+                )
             else:
                 lines.append(f"\n[{current_speaker}]")
 
@@ -305,17 +285,16 @@ def _format_time(seconds: float) -> str:
     return f"{minutes:02d}:{secs:02d}"
 
 
-def get_speaker_stats(segments: list[SpeakerSegment]) -> dict[str, dict]:
+def get_speaker_stats(
+    segments: list[SpeakerSegment],
+) -> dict[str, dict[str, Any]]:
     """
     Get statistics for each speaker.
 
-    Args:
-        segments: List of speaker segments.
-
-    Returns:
-        Dictionary with speaker stats (duration, word count, etc.).
+    :param segments: List of speaker segments.
+    :returns: Dictionary with speaker stats (duration, word count, etc.).
     """
-    stats: dict[str, dict] = {}
+    stats: dict[str, dict[str, Any]] = {}
 
     for segment in segments:
         speaker = segment.speaker
