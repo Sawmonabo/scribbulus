@@ -1,156 +1,222 @@
 #!/bin/bash
 # install-ffmpeg.sh - Cross-platform FFmpeg installer for Scribbulus
 #
-# Usage: ./scripts/install-ffmpeg.sh
+# Usage: ./scripts/install-ffmpeg.sh [OPTIONS]
+#
+# Options:
+#   -f, --force    Force reinstall even if ffmpeg is present
+#   -q, --quiet    Suppress non-error output
+#   -h, --help     Show this help message
 #
 # Supports:
 #   - macOS (via Homebrew)
 #   - Ubuntu/Debian (via apt)
 #   - Fedora (via dnf)
 #   - Arch Linux (via pacman)
+#   - openSUSE (via zypper)
+#   - Alpine (via apk)
+#
+# Exit codes:
+#   0  Success (installed or already present)
+#   1  General error
+#   2  Missing dependency (e.g., Homebrew)
 
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Colors
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[0;33m'
+readonly RED='\033[0;31m'
+readonly NC='\033[0m'
 
-echo -e "${GREEN}=== FFmpeg Installer for Scribbulus ===${NC}"
-echo ""
+# Defaults
+FORCE=0
+QUIET=0
+
+# Print help message from script header
+show_help() {
+    sed -n '2,22p' "$0" | sed 's/^# //' | sed 's/^#//'
+}
+
+# Logging functions
+log_info() {
+    if [[ "${QUIET}" -eq 0 ]]; then
+        printf '%b%s%b\n' "${GREEN}" "$1" "${NC}"
+    fi
+}
+
+log_warn() {
+    if [[ "${QUIET}" -eq 0 ]]; then
+        printf '%b%s%b\n' "${YELLOW}" "$1" "${NC}"
+    fi
+}
+
+log_error() {
+    printf '%b%s%b\n' "${RED}" "$1" "${NC}" >&2
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -f|--force)
+            FORCE=1
+            shift
+            ;;
+        -q|--quiet)
+            QUIET=1
+            shift
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            printf 'Use --help for usage.\n'
+            exit 1
+            ;;
+    esac
+done
+
+log_info "=== FFmpeg Installer for Scribbulus ==="
+if [[ "${QUIET}" -eq 0 ]]; then
+    printf '\n'
+fi
 
 # Check if ffmpeg is already installed
 if command -v ffmpeg &> /dev/null; then
-    echo -e "${GREEN}FFmpeg is already installed:${NC}"
-    ffmpeg -version | head -1
-    echo ""
-    read -p "Do you want to reinstall/upgrade? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Skipping installation."
+    log_info "FFmpeg is already installed:"
+    if [[ "${QUIET}" -eq 0 ]]; then
+        ffmpeg -version | head -1
+    fi
+    if [[ "${FORCE}" -eq 0 ]]; then
+        log_info "Use --force to reinstall."
         exit 0
     fi
+    log_warn "Force reinstall requested..."
 fi
 
 # Detect OS
-OS="$(uname -s)"
-echo -e "${YELLOW}Detected OS: ${OS}${NC}"
+os_name="$(uname -s)"
+log_warn "Detected OS: ${os_name}"
 
-case "$OS" in
+case "${os_name}" in
     Darwin)
-        echo "Platform: macOS"
-        echo ""
+        printf 'Platform: macOS\n'
+        printf '\n'
 
         # Check for Homebrew
         if ! command -v brew &> /dev/null; then
-            echo -e "${RED}Error: Homebrew not found${NC}"
-            echo ""
-            echo "Homebrew is required to install FFmpeg on macOS."
-            echo "Install Homebrew first:"
-            echo ""
-            echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-            echo ""
-            exit 1
+            log_error "Error: Homebrew not found"
+            printf '\n'
+            printf 'Homebrew is required to install FFmpeg on macOS.\n'
+            printf 'Install Homebrew first:\n'
+            printf '\n'
+            # shellcheck disable=SC2016 # Intentionally unexpanded - showing literal command
+            printf '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\n'
+            printf '\n'
+            exit 2
         fi
 
-        echo "Installing FFmpeg via Homebrew..."
+        printf 'Installing FFmpeg via Homebrew...\n'
         brew install ffmpeg
         ;;
 
     Linux)
-        echo "Platform: Linux"
-        echo ""
+        printf 'Platform: Linux\n'
+        printf '\n'
 
         # Detect package manager and install
         if command -v apt &> /dev/null; then
-            echo "Package manager: apt (Debian/Ubuntu)"
-            echo "Installing FFmpeg..."
+            printf 'Package manager: apt (Debian/Ubuntu)\n'
+            printf 'Installing FFmpeg...\n'
             sudo apt update
             sudo apt install -y ffmpeg
 
         elif command -v dnf &> /dev/null; then
-            echo "Package manager: dnf (Fedora)"
-            echo "Installing FFmpeg..."
+            printf 'Package manager: dnf (Fedora)\n'
+            printf 'Installing FFmpeg...\n'
             sudo dnf install -y ffmpeg
 
         elif command -v pacman &> /dev/null; then
-            echo "Package manager: pacman (Arch Linux)"
-            echo "Installing FFmpeg..."
+            printf 'Package manager: pacman (Arch Linux)\n'
+            printf 'Installing FFmpeg...\n'
             sudo pacman -S --noconfirm ffmpeg
 
         elif command -v zypper &> /dev/null; then
-            echo "Package manager: zypper (openSUSE)"
-            echo "Installing FFmpeg..."
+            printf 'Package manager: zypper (openSUSE)\n'
+            printf 'Installing FFmpeg...\n'
             sudo zypper install -y ffmpeg
 
         elif command -v apk &> /dev/null; then
-            echo "Package manager: apk (Alpine)"
-            echo "Installing FFmpeg..."
+            printf 'Package manager: apk (Alpine)\n'
+            printf 'Installing FFmpeg...\n'
             sudo apk add ffmpeg
 
         else
-            echo -e "${RED}Error: No supported package manager found${NC}"
-            echo ""
-            echo "Please install FFmpeg manually for your distribution."
-            echo "Visit: https://ffmpeg.org/download.html"
+            log_error "Error: No supported package manager found"
+            printf '\n'
+            printf 'Please install FFmpeg manually for your distribution.\n'
+            printf 'Visit: https://ffmpeg.org/download.html\n'
             exit 1
         fi
         ;;
 
     CYGWIN*|MINGW*|MSYS*)
-        echo "Platform: Windows (via Cygwin/MinGW/MSYS)"
-        echo ""
-        echo -e "${YELLOW}Note: Windows support is best-effort.${NC}"
-        echo ""
-        echo "Recommended installation methods for Windows:"
-        echo ""
-        echo "1. Using Chocolatey:"
-        echo "   choco install ffmpeg"
-        echo ""
-        echo "2. Using Scoop:"
-        echo "   scoop install ffmpeg"
-        echo ""
-        echo "3. Manual download:"
-        echo "   https://ffmpeg.org/download.html#build-windows"
-        echo ""
+        printf 'Platform: Windows (via Cygwin/MinGW/MSYS)\n'
+        printf '\n'
+        log_warn "Note: Windows support is best-effort."
+        printf '\n'
+        printf 'Recommended installation methods for Windows:\n'
+        printf '\n'
+        printf '1. Using Chocolatey:\n'
+        printf '   choco install ffmpeg\n'
+        printf '\n'
+        printf '2. Using Scoop:\n'
+        printf '   scoop install ffmpeg\n'
+        printf '\n'
+        printf '3. Manual download:\n'
+        printf '   https://ffmpeg.org/download.html#build-windows\n'
+        printf '\n'
         exit 1
         ;;
 
     *)
-        echo -e "${RED}Error: Unsupported operating system: ${OS}${NC}"
-        echo ""
-        echo "Please install FFmpeg manually."
-        echo "Visit: https://ffmpeg.org/download.html"
+        log_error "Error: Unsupported operating system: ${os_name}"
+        printf '\n'
+        printf 'Please install FFmpeg manually.\n'
+        printf 'Visit: https://ffmpeg.org/download.html\n'
         exit 1
         ;;
 esac
 
 # Verify installation
-echo ""
-echo -e "${GREEN}Verifying installation...${NC}"
+printf '\n'
+log_info "Verifying installation..."
 
 if command -v ffmpeg &> /dev/null; then
-    echo -e "${GREEN}FFmpeg installed successfully!${NC}"
-    echo ""
+    log_info "FFmpeg installed successfully!"
+    printf '\n'
     ffmpeg -version | head -3
-    echo ""
+    printf '\n'
 
     # Check for ffprobe
     if command -v ffprobe &> /dev/null; then
-        echo -e "${GREEN}ffprobe is also available.${NC}"
+        log_info "ffprobe is also available."
     else
-        echo -e "${YELLOW}Warning: ffprobe not found. Some features may not work.${NC}"
+        log_warn "Warning: ffprobe not found. Some features may not work."
     fi
 else
-    echo -e "${RED}Error: FFmpeg installation failed${NC}"
+    log_error "Error: FFmpeg installation failed"
     exit 1
 fi
 
-echo ""
-echo -e "${GREEN}=== Installation Complete ===${NC}"
-echo ""
-echo "You can now use Scribbulus for audio/video transcription."
-echo ""
-echo "Quick start:"
-echo "  scribbulus-transcribe video.mp4 -o transcript.txt"
+printf '\n'
+log_info "=== Installation Complete ==="
+printf '\n'
+printf 'You can now use Scribbulus for audio/video transcription.\n'
+printf '\n'
+printf 'Quick start:\n'
+printf '  scribbulus-transcribe video.mp4 -o transcript.txt\n'
