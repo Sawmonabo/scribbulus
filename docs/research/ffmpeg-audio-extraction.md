@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document covers best practices for extracting audio from video files using FFmpeg, with focus on iPhone recordings and large file handling.
+This document covers best practices for extracting audio from video files using FFmpeg,
+with focus on iPhone recordings and large file handling.
 
 ## Audio Extraction Commands
 
@@ -73,13 +74,13 @@ ffmpeg -i input.mp4 -vn -c:a flac -compression_level 8 output.flac
 
 ### Common iPhone Audio Specifications
 
-| Recording Mode | Container | Audio Codec | Sample Rate | Channels |
-|---------------|-----------|-------------|-------------|----------|
-| Standard video | MOV/MP4 | AAC-LC | 48kHz | Stereo |
-| 4K video | MOV/MP4 | AAC-LC | 48kHz | Stereo |
-| Live Photos | MOV | PCM | 44.1kHz | Mono/Stereo |
-| ProRes | MOV | PCM (LPCM) | 48kHz | Stereo |
-| Slow-motion | MOV/MP4 | AAC-LC | 48kHz | Stereo |
+| Recording Mode | Container | Audio Codec | Sample Rate | Channels    |
+| -------------- | --------- | ----------- | ----------- | ----------- |
+| Standard video | MOV/MP4   | AAC-LC      | 48kHz       | Stereo      |
+| 4K video       | MOV/MP4   | AAC-LC      | 48kHz       | Stereo      |
+| Live Photos    | MOV       | PCM         | 44.1kHz     | Mono/Stereo |
+| ProRes         | MOV       | PCM (LPCM)  | 48kHz       | Stereo      |
+| Slow-motion    | MOV/MP4   | AAC-LC      | 48kHz       | Stereo      |
 
 ### Handling Variable Frame Rate (VFR)
 

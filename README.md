@@ -9,7 +9,8 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196.svg?logo=conventionalcommits)](https://conventionalcommits.org)
 
-Production-grade media transcription tool that converts audio and video files to text using faster-whisper with optional speaker diarization.
+Production-grade media transcription tool that converts audio and video files to text
+using faster-whisper with optional speaker diarization.
 
 ## Features
 
@@ -54,6 +55,7 @@ This will:
    - Fedora: `sudo dnf install ffmpeg`
 
 3. **Install scribbulus**:
+
    ```bash
    uv sync
    uv pip install -e .
@@ -70,12 +72,13 @@ For faster transcription, install CUDA support:
 
 Speaker diarization requires a HuggingFace token:
 
-1. Create a HuggingFace account at https://huggingface.co
-2. Get your token at https://huggingface.co/settings/tokens
+1. Create a HuggingFace account at <https://huggingface.co>
+2. Get your token at <https://huggingface.co/settings/tokens>
 3. Accept the terms for pyannote models:
-   - https://huggingface.co/pyannote/speaker-diarization-3.1
-   - https://huggingface.co/pyannote/segmentation-3.0
+   - <https://huggingface.co/pyannote/speaker-diarization-3.1>
+   - <https://huggingface.co/pyannote/segmentation-3.0>
 4. Set the token:
+
    ```bash
    export HF_TOKEN=your_token_here
    ```
@@ -133,7 +136,7 @@ scribbulus-transcribe audio.mp3 -v
 
 ### Full CLI Reference
 
-```
+```text
 Usage: scribbulus-transcribe [OPTIONS] INPUT_PATH
 
   Transcribe audio/video files to text.
@@ -198,7 +201,7 @@ Options:
 
 ### With Speaker Diarization
 
-```
+```text
 [Speaker 1] Hello, welcome to today's meeting.
 [Speaker 2] Thanks for having me. Let's discuss the project timeline.
 [Speaker 1] Sure. I think we should start with the requirements phase.
@@ -206,13 +209,14 @@ Options:
 
 ### Without Diarization
 
-```
-Hello, welcome to today's meeting. Thanks for having me. Let's discuss the project timeline. Sure. I think we should start with the requirements phase.
+```text
+Hello, welcome to today's meeting. Thanks for having me. Let's discuss the
+project timeline. Sure. I think we should start with the requirements phase.
 ```
 
 ### With Timestamps
 
-```
+```text
 [00:00] [Speaker 1] Hello, welcome to today's meeting.
 [00:05] [Speaker 2] Thanks for having me.
 ```
@@ -255,7 +259,7 @@ make clean
 
 ### FFmpeg Not Found
 
-```
+```text
 Error: FFmpeg not found
 
 Install ffmpeg:
@@ -288,7 +292,7 @@ scribbulus-transcribe audio.mp3 --device cpu
 
 ## Architecture
 
-```
+```text
 scribbulus/
 ├── cli/
 │   └── transcribe.py      # CLI entrypoint

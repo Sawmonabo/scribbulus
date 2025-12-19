@@ -2,7 +2,8 @@
 
 ## Overview
 
-Scribbulus is a production-grade CLI tool for transcribing audio and video files to text using faster-whisper with speaker diarization support.
+Scribbulus is a production-grade CLI tool for transcribing audio and video files to text
+using faster-whisper with speaker diarization support.
 
 ## Requirements
 
@@ -36,55 +37,33 @@ Scribbulus is a production-grade CLI tool for transcribing audio and video files
 
 ## Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| CLI Framework | Click | Industry standard, excellent docs |
-| STT Engine | faster-whisper | Free, fast, accurate, local |
-| Whisper Model | large-v3-turbo | Best speed/accuracy balance |
-| Diarization | WhisperX + pyannote | Best speaker identification |
-| Package Manager | uv | Fast, modern Python tooling |
-| FFmpeg Integration | subprocess (list) | Security, no shell=True |
+| Decision           | Choice              | Rationale                         |
+| ------------------ | ------------------- | --------------------------------- |
+| CLI Framework      | Click               | Industry standard, excellent docs |
+| STT Engine         | faster-whisper      | Free, fast, accurate, local       |
+| Whisper Model      | large-v3-turbo      | Best speed/accuracy balance       |
+| Diarization        | WhisperX + pyannote | Best speaker identification       |
+| Package Manager    | uv                  | Fast, modern Python tooling       |
+| FFmpeg Integration | subprocess (list)   | Security, no shell=True           |
 
 ## Architecture
 
-```
-Input File (video/audio)
-        │
-        ▼
-┌─────────────────┐
-│ Format Detection│  ← ffprobe
-│ (formats.py)    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Audio Extraction│  ← ffmpeg (if video)
-│ (audio_prep.py) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Audio Chunking  │  ← 30-second segments
-│ (chunking.py)   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Transcription   │  ← faster-whisper
-│ (whisper.py)    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Diarization     │  ← WhisperX (optional)
-│ (diarization.py)│
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Output Format   │
-│ (.txt file)     │
-└─────────────────┘
+```mermaid
+flowchart TD
+    input["Input File<br/>(video/audio)"]
+    detection["Format Detection<br/>(formats.py)"]
+    extraction["Audio Extraction<br/>(audio_prep.py)"]
+    chunking["Audio Chunking<br/>(chunking.py)"]
+    transcription["Transcription<br/>(whisper_backend.py)"]
+    diarization["Diarization<br/>(diarization.py)"]
+    output["Output<br/>(.txt file)"]
+
+    input --> detection
+    detection -->|"ffprobe"| extraction
+    extraction -->|"ffmpeg"| chunking
+    chunking -->|"30s segments"| transcription
+    transcription -->|"faster-whisper"| diarization
+    diarization -->|"WhisperX"| output
 ```
 
 ## CLI Interface
@@ -105,16 +84,16 @@ Options:
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Input file not found |
-| 3 | Unsupported format |
-| 4 | No audio stream |
-| 5 | FFmpeg not found |
-| 6 | Transcription failed |
-| 7 | Diarization failed |
+| Code | Meaning              |
+| ---- | -------------------- |
+| 0    | Success              |
+| 1    | General error        |
+| 2    | Input file not found |
+| 3    | Unsupported format   |
+| 4    | No audio stream      |
+| 5    | FFmpeg not found     |
+| 6    | Transcription failed |
+| 7    | Diarization failed   |
 
 ## Security Considerations
 

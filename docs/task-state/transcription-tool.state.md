@@ -12,7 +12,7 @@
 - [x] Step 1: Project scaffolding with uv
   - [x] pyproject.toml
   - [x] .gitignore
-  - [x] Package __init__.py files
+  - [x] Package `__init__.py` files
 - [x] Step 2: Makefile & cross-platform setup
   - [x] Makefile with OS detection
   - [x] scripts/install-ffmpeg.sh
@@ -53,16 +53,16 @@ All 15 implementation steps have been completed. The tool is ready for testing a
 
 ## Decisions Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2025-12-18 | Use faster-whisper over original Whisper | 4x faster, same accuracy, lower memory |
-| 2025-12-18 | Use large-v3-turbo model | Best speed/accuracy balance |
-| 2025-12-18 | Use uv package manager | Fast, modern, good for new projects |
-| 2025-12-18 | Use Click for CLI | Industry standard, excellent docs |
-| 2025-12-18 | Process audio in 30-second chunks | Memory efficiency for large files |
-| 2025-12-18 | Use subprocess list (not shell=True) | Security best practice |
-| 2025-12-18 | Direct ffmpeg subprocess | More control than pydub, explicit commands |
-| 2025-12-18 | Output to stdout by default | Unix philosophy, pipe-friendly |
+| Date       | Decision                                 | Rationale                                  |
+| ---------- | ---------------------------------------- | ------------------------------------------ |
+| 2025-12-18 | Use faster-whisper over original Whisper | 4x faster, same accuracy, lower memory     |
+| 2025-12-18 | Use large-v3-turbo model                 | Best speed/accuracy balance                |
+| 2025-12-18 | Use uv package manager                   | Fast, modern, good for new projects        |
+| 2025-12-18 | Use Click for CLI                        | Industry standard, excellent docs          |
+| 2025-12-18 | Process audio in 30-second chunks        | Memory efficiency for large files          |
+| 2025-12-18 | Use subprocess list (not shell=True)     | Security best practice                     |
+| 2025-12-18 | Direct ffmpeg subprocess                 | More control than pydub, explicit commands |
+| 2025-12-18 | Output to stdout by default              | Unix philosophy, pipe-friendly             |
 
 ## Open Questions
 
@@ -77,14 +77,14 @@ All 15 implementation steps have been completed. The tool is ready for testing a
 
 ## Change History
 
-| Date | Change | Files |
-|------|--------|-------|
-| 2025-12-18 | Initial documentation created | docs/research/*, docs/plan/*, docs/task-state/* |
-| 2025-12-18 | Project scaffolding | pyproject.toml, .gitignore, Makefile |
-| 2025-12-18 | Media handling modules | media/ffmpeg.py, media/formats.py, media/audio_prep.py |
-| 2025-12-18 | Transcription modules | transcription/chunking.py, whisper_backend.py, diarization.py, engine.py |
-| 2025-12-18 | CLI and tests | cli/transcribe.py, tests/* |
-| 2025-12-18 | Final documentation | README.md, updated task-state |
+| Date       | Change                        | Files                                                                     |
+| ---------- | ----------------------------- | ------------------------------------------------------------------------- |
+| 2025-12-18 | Initial documentation created | docs/research/\*, docs/plan/\*, docs/task-state/\*                        |
+| 2025-12-18 | Project scaffolding           | pyproject.toml, .gitignore, Makefile                                      |
+| 2025-12-18 | Media handling modules        | media/ffmpeg.py, media/formats.py, media/audio_prep.py                    |
+| 2025-12-18 | Transcription modules         | transcription/chunking.py, whisper_backend.py, diarization.py, engine.py  |
+| 2025-12-18 | CLI and tests                 | cli/transcribe.py, tests/\*                                               |
+| 2025-12-18 | Final documentation           | README.md, updated task-state                                             |
 
 ## Notes
 

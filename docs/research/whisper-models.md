@@ -6,16 +6,16 @@ OpenAI Whisper offers multiple model sizes with different speed/accuracy tradeof
 
 ## Model Sizes
 
-| Model | Parameters | VRAM Required | Relative Speed | English WER |
-|-------|-----------|---------------|----------------|-------------|
-| tiny | 39M | ~1GB | ~10x | ~10% |
-| base | 74M | ~1GB | ~7x | ~7% |
-| small | 244M | ~2GB | ~4x | ~5% |
-| medium | 769M | ~5GB | ~2x | ~4% |
-| large-v3 | 1.55B | ~10GB | 1x | ~3% |
-| **large-v3-turbo** | 809M | ~6GB | **~8x** | ~3.5% |
+| Model              | Parameters | VRAM Required | Relative Speed | English WER |
+| ------------------ | ---------- | ------------- | -------------- | ----------- |
+| tiny               | 39M        | ~1GB          | ~10x           | ~10%        |
+| base               | 74M        | ~1GB          | ~7x            | ~7%         |
+| small              | 244M       | ~2GB          | ~4x            | ~5%         |
+| medium             | 769M       | ~5GB          | ~2x            | ~4%         |
+| large-v3           | 1.55B      | ~10GB         | 1x             | ~3%         |
+| **large-v3-turbo** | 809M       | ~6GB          | **~8x**        | ~3.5%       |
 
-*WER = Word Error Rate (lower is better)*
+WER = Word Error Rate (lower is better)
 
 ## large-v3-turbo (Recommended)
 
@@ -37,18 +37,18 @@ Released October 2024, the turbo model is optimized for speed while maintaining 
 
 ### GPU (CUDA)
 
-| Compute Type | Memory Usage | Speed | Quality |
-|--------------|--------------|-------|---------|
-| float16 | Baseline | Fastest | Best |
-| int8_float16 | ~50% less | Fast | Good |
-| int8 | ~75% less | Moderate | Good |
+| Compute Type | Memory Usage | Speed    | Quality |
+| ------------ | ------------ | -------- | ------- |
+| float16      | Baseline     | Fastest  | Best    |
+| int8_float16 | ~50% less    | Fast     | Good    |
+| int8         | ~75% less    | Moderate | Good    |
 
 ### CPU
 
-| Compute Type | Speed | Notes |
-|--------------|-------|-------|
-| int8 | Fastest | Recommended for CPU |
-| float32 | Slowest | Not recommended |
+| Compute Type | Speed   | Notes               |
+| ------------ | ------- | ------------------- |
+| int8         | Fastest | Recommended for CPU |
+| float32      | Slowest | Not recommended     |
 
 ## Usage Examples
 
@@ -107,27 +107,27 @@ print(f"Probability: {info.language_probability:.2%}")
 
 ## Model Selection Guide
 
-| Use Case | Recommended Model | Why |
-|----------|------------------|-----|
-| General transcription | large-v3-turbo | Best speed/accuracy balance |
-| Low VRAM (<6GB) | medium or small | Fits in memory |
-| CPU only | small with int8 | Reasonable speed |
-| Maximum accuracy | large-v3 | Lowest WER |
-| Real-time/streaming | small or base | Fast enough for real-time |
-| Translation | large-v3 | Turbo has reduced translation quality |
+| Use Case              | Recommended Model  | Why                                   |
+| --------------------- | ------------------ | ------------------------------------- |
+| General transcription | large-v3-turbo     | Best speed/accuracy balance           |
+| Low VRAM (<6GB)       | medium or small    | Fits in memory                        |
+| CPU only              | small with int8    | Reasonable speed                      |
+| Maximum accuracy      | large-v3           | Lowest WER                            |
+| Real-time/streaming   | small or base      | Fast enough for real-time             |
+| Translation           | large-v3           | Turbo has reduced translation quality |
 
 ## Memory Requirements
 
 ### GPU VRAM by Model
 
-| Model | float16 | int8_float16 | int8 |
-|-------|---------|--------------|------|
-| tiny | <1GB | <1GB | <1GB |
-| base | ~1GB | <1GB | <1GB |
-| small | ~2GB | ~1.5GB | ~1GB |
-| medium | ~5GB | ~3GB | ~2GB |
-| large-v3 | ~10GB | ~6GB | ~4GB |
-| large-v3-turbo | ~6GB | ~4GB | ~3GB |
+| Model            | float16 | int8_float16 | int8  |
+| ---------------- | ------- | ------------ | ----- |
+| tiny             | <1GB    | <1GB         | <1GB  |
+| base             | ~1GB    | <1GB         | <1GB  |
+| small            | ~2GB    | ~1.5GB       | ~1GB  |
+| medium           | ~5GB    | ~3GB         | ~2GB  |
+| large-v3         | ~10GB   | ~6GB         | ~4GB  |
+| large-v3-turbo   | ~6GB    | ~4GB         | ~3GB  |
 
 ### System RAM (CPU inference)
 

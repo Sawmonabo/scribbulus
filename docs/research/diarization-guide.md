@@ -2,7 +2,8 @@
 
 ## Overview
 
-Speaker diarization identifies "who spoke when" in an audio recording. This guide covers using WhisperX with pyannote for speaker identification.
+Speaker diarization identifies "who spoke when" in an audio recording.
+This guide covers using WhisperX with pyannote for speaker identification.
 
 ## Prerequisites
 
@@ -153,12 +154,12 @@ for turn, _, speaker in diarization.itertracks(yield_label=True):
 
 ### GPU Memory for Diarization
 
-| Component | Approximate VRAM |
-|-----------|-----------------|
-| Whisper large-v3-turbo | ~6GB |
-| Alignment model | ~1GB |
-| Diarization model | ~2GB |
-| **Total** | **~9GB** |
+| Component              | Approximate VRAM |
+| ---------------------- | ---------------- |
+| Whisper large-v3-turbo | ~6GB             |
+| Alignment model        | ~1GB             |
+| Diarization model      | ~2GB             |
+| **Total**              | **~9GB**         |
 
 ### Reducing Memory Usage
 

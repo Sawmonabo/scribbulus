@@ -92,14 +92,14 @@ pip install vosk
 
 ### Pricing Comparison (as of 2025)
 
-| Provider | Price/Hour | Diarization | Streaming | Free Tier |
-|----------|-----------|-------------|-----------|-----------|
-| OpenAI Whisper API | $0.36 | GPT-4o only | No | None |
-| Google Cloud | $0.96-1.44 | Included | Yes | 60 min/mo |
-| AWS Transcribe | $1.44-1.80 | Included | Yes | 60 min/mo |
-| Azure Speech | $1.00-2.10 | Extra cost | Yes | 5 hrs/mo |
-| AssemblyAI | $0.15-0.40 | +$0.02/hr | Yes | $50 credit |
-| Deepgram | $0.26 | Included | Yes | $200 credit |
+| Provider           | Price/Hour  | Diarization | Streaming | Free Tier   |
+| ------------------ | ----------- | ----------- | --------- | ----------- |
+| OpenAI Whisper API | $0.36       | GPT-4o only | No        | None        |
+| Google Cloud       | $0.96-1.44  | Included    | Yes       | 60 min/mo   |
+| AWS Transcribe     | $1.44-1.80  | Included    | Yes       | 60 min/mo   |
+| Azure Speech       | $1.00-2.10  | Extra cost  | Yes       | 5 hrs/mo    |
+| AssemblyAI         | $0.15-0.40  | +$0.02/hr   | Yes       | $50 credit  |
+| Deepgram           | $0.26       | Included    | Yes       | $200 credit |
 
 ### OpenAI Whisper API
 
@@ -135,19 +135,19 @@ transcript = transcriber.transcribe("audio.mp3", config=config)
 
 ## Comparison: Local vs Cloud
 
-| Factor | Local (faster-whisper) | Cloud APIs |
-|--------|----------------------|------------|
-| Cost | Free (after GPU) | Pay per minute |
-| Privacy | Full control | Data sent to cloud |
-| Speed | Depends on hardware | Generally fast |
-| Accuracy | Excellent (~5% WER) | Excellent |
-| Setup | More complex | Simple API keys |
-| Internet | Not required | Required |
-| Scaling | Limited by hardware | Unlimited |
+| Factor   | Local (faster-whisper) | Cloud APIs         |
+| -------- | ---------------------- | ------------------ |
+| Cost     | Free (after GPU)       | Pay per minute     |
+| Privacy  | Full control           | Data sent to cloud |
+| Speed    | Depends on hardware    | Generally fast     |
+| Accuracy | Excellent (~5% WER)    | Excellent          |
+| Setup    | More complex           | Simple API keys    |
+| Internet | Not required           | Required           |
+| Scaling  | Limited by hardware    | Unlimited          |
 
 ## Recommendation
 
-**For this project: faster-whisper with large-v3-turbo model**
+For this project, we recommend **faster-whisper with large-v3-turbo model**.
 
 Reasons:
 
