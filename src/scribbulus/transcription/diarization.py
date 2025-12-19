@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from scribbulus.utils.deps import cleanup_gpu_memory, get_device, get_whisperx
 from scribbulus.utils.errors import DiarizationError, HuggingFaceTokenError
+from scribbulus.utils.formatter import format_diarized_segments
 from scribbulus.utils.types import DeviceType, ResolvedDeviceType
 
 if TYPE_CHECKING:
@@ -252,26 +253,10 @@ def format_diarized_transcript(
     :param include_timestamps: Include timestamps in output.
     :returns: Formatted transcript string.
     """
-    if not segments:
-        return ""
-
-    lines = []
-    current_speaker = None
-
-    for segment in segments:
-        # Add speaker label when it changes
-        if segment.speaker != current_speaker:
-            current_speaker = segment.speaker
-            if include_timestamps:
-                lines.append(
-                    f"\n[{current_speaker}] ({_format_time(segment.start)})"
-                )
-            else:
-                lines.append(f"\n[{current_speaker}]")
-
-        lines.append(segment.text.strip())
-
-    return " ".join(lines).strip()
+    return format_diarized_segments(
+        segments,
+        include_timestamps=include_timestamps,
+    )
 
 
 def _format_time(seconds: float) -> str:

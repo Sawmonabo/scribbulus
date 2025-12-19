@@ -170,12 +170,16 @@ lint: check-uv
 	@echo "$(GREEN)Running linter...$(NC)"
 	@uv run ruff check src/ tests/
 	@uv run ruff format --check src/ tests/
+	@echo "$(GREEN)Running markdown linter...$(NC)"
+	@npx markdownlint-cli "docs/**/*.md" "*.md" 2>/dev/null || echo "$(YELLOW)Note: Install markdownlint-cli for markdown linting$(NC)"
 
 # Auto-format code
 format: check-uv
 	@echo "$(GREEN)Formatting code...$(NC)"
 	@uv run ruff format src/ tests/
 	@uv run ruff check --fix src/ tests/
+	@echo "$(GREEN)Formatting markdown...$(NC)"
+	@npx markdownlint-cli --fix "docs/**/*.md" "*.md" 2>/dev/null || true
 	@echo "$(GREEN)Code formatted$(NC)"
 
 # Type checking

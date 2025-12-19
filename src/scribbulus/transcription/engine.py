@@ -33,6 +33,7 @@ from scribbulus.transcription.whisper_backend import (
     WhisperTranscriber,
 )
 from scribbulus.utils.deps import cleanup_gpu_memory
+from scribbulus.utils.formatter import format_simple_segments
 from scribbulus.utils.types import ComputeType, DeviceType, ModelSize
 
 if TYPE_CHECKING:
@@ -102,15 +103,10 @@ class TranscriptionOutput:
             )
 
         # Simple format without speakers
-        texts = []
-        for segment in self.segments:
-            if include_timestamps:
-                time_str = self._format_time(segment.start)
-                texts.append(f"[{time_str}] {segment.text.strip()}")
-            else:
-                texts.append(segment.text.strip())
-
-        return " ".join(texts)
+        return format_simple_segments(
+            self.segments,  # type: ignore
+            include_timestamps=include_timestamps,
+        )
 
     @staticmethod
     def _format_time(seconds: float) -> str:
