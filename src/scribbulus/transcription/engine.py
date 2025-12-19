@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
@@ -34,14 +33,15 @@ from scribbulus.transcription.whisper_backend import (
 )
 from scribbulus.utils.deps import cleanup_gpu_memory
 from scribbulus.utils.formatter import format_simple_segments
-from scribbulus.utils.types import ComputeType, DeviceType, ModelSize
+from scribbulus.utils.types import (
+    ComputeType,
+    DeviceType,
+    ModelSize,
+    ProgressCallback,
+)
 
 if TYPE_CHECKING:
     pass
-
-
-# Progress callback type
-ProgressCallback = Callable[[str, float], None]
 
 
 @dataclass
@@ -353,7 +353,7 @@ class TranscriptionEngine:
         self._cleanup()
 
 
-def transcribe_file(  # noqa: PLR0913 - convenience function with many options
+def transcribe_file(  # noqa: PLR0913
     input_path: str | Path,
     *,
     model_size: ModelSize = "large-v3-turbo",
