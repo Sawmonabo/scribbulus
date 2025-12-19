@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import sys
 import traceback
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -23,6 +22,7 @@ from scribbulus.utils.errors import (
     TranscriptionError,
     UnsupportedFormatError,
 )
+from scribbulus.utils.progress import create_stage_callback
 from scribbulus.utils.types import ComputeType, DeviceType
 
 if TYPE_CHECKING:
@@ -74,43 +74,6 @@ def setup_logging(verbose: bool) -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[logging.StreamHandler(sys.stderr)],
     )
-
-
-def create_progress_callback(verbose: bool) -> Callable[[str, float], None]:
-    """
-    Create a progress callback function.
-
-    :param verbose: Enable verbose progress output if True.
-    :returns: A callback function that accepts stage name and progress.
-    """
-    last_stage: dict[str, str | None] = {"name": None}
-
-    def callback(stage: str, progress: float) -> None:
-        if verbose:
-            if stage != last_stage["name"]:
-                if last_stage["name"] is not None:
-                    click.echo("", err=True)  # New line after previous stage
-                click.echo(f"{stage}... ", nl=False, err=True)
-                last_stage["name"] = stage
-
-            # Show progress percentage
-            pct = int(progress * 100)
-            click.echo(f"\r{stage}... {pct}%", nl=False, err=True)
-
-            if progress >= 1.0:
-                click.echo("", err=True)  # New line when complete
-        else:
-            # Non-verbose: just show stage transitions
-            if stage != last_stage["name"]:
-                if last_stage["name"] is not None:
-                    click.echo(" done", err=True)
-                click.echo(f"  {stage}...", nl=False, err=True)
-                last_stage["name"] = stage
-
-            if progress >= 1.0 and stage == "Identifying speakers":
-                click.echo(" done", err=True)
-
-    return callback
 
 
 def write_output(
@@ -232,6 +195,14 @@ def write_output(
     default=False,
     help="Enable verbose output with progress details.",
 )
+@click.option(
+    "--no-progress",
+    "no_progress",
+    is_flag=True,
+    default=False,
+    envvar="SCRIBBULUS_NO_PROGRESS",
+    help="Disable progress bars (auto-disabled in CI/non-TTY).",
+)
 @click.version_option(package_name="scribbulus")
 def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click options
     input_path: Path,
@@ -248,6 +219,7 @@ def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click o
     chunk_duration: float,
     no_chunking: bool,
     verbose: bool,
+    no_progress: bool,
 ) -> None:
     """
     Transcribe audio/video files to text.
@@ -292,7 +264,9 @@ def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click o
     )
 
     # Create progress callback
-    progress_callback = create_progress_callback(verbose)
+    # disable=True forces off, disable=None auto-detects TTY
+    progress_disabled = True if no_progress else None
+    progress_callback = create_stage_callback(disable=progress_disabled)
 
     try:
         click.echo(f"Transcribing: {input_path.name}", err=True)

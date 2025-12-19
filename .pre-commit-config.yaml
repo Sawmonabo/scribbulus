@@ -91,6 +91,12 @@ repos:
     name: codespell
     args: ['--skip=*.lock,*.json', --ignore-words-list=mot]
     types_or: [python, markdown, rst, text]
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.43.0
+  hooks:
+  - id: markdownlint
+    name: markdownlint
+    args: [--fix]
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
   rev: v2.14.0
   hooks:

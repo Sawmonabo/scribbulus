@@ -1,0 +1,16 @@
+# Markdownlint ignore patterns
+
+# Virtual environment
+.venv/
+
+# Cache directories
+.cache/
+__pycache__/
+
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

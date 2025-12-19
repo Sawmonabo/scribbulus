@@ -187,7 +187,7 @@ typecheck: check-uv
 clean:
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf build/ dist/ *.egg-info/
-	@rm -rf .pytest_cache/ .mypy_cache/ .ruff_cache/
+	@rm -rf .cache/
 	@rm -rf htmlcov/ .coverage coverage.xml
 	@find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
@@ -198,20 +198,3 @@ clean-all: clean
 	@echo "$(YELLOW)Removing virtual environment...$(NC)"
 	@rm -rf .venv/
 	@echo "$(GREEN)Deep clean complete$(NC)"
-
-# Show project info
-info:
-	@echo "$(GREEN)Project Information$(NC)"
-	@echo "===================="
-	@echo "Name: scribbulus"
-	@echo "Version: 0.1.0"
-	@echo "Python: 3.13+"
-	@echo ""
-	@echo "$(YELLOW)Dependencies:$(NC)"
-	@echo "  - click"
-	@echo "  - faster-whisper"
-	@echo "  - torch"
-	@echo "  - torchaudio"
-	@echo "  - pydub"
-	@echo "  - tqdm"
-	@echo "  - whisperx (optional, for diarization)"

@@ -9,6 +9,7 @@ from typing import Literal
 from scribbulus.media.ffmpeg import run_ffprobe
 from scribbulus.utils.errors import (
     FFprobeError,
+    FileNotFoundError,
     NoAudioStreamError,
     UnsupportedFormatError,
 )
@@ -221,10 +222,6 @@ def validate_input_file(file_path: str | Path) -> MediaInfo:
 
     # Check file exists
     if not file_path.exists():
-        from scribbulus.utils.errors import (
-            FileNotFoundError,
-        )
-
         raise FileNotFoundError(str(file_path))
 
     # Probe the file
