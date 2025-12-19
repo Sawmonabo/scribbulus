@@ -1,0 +1,140 @@
+[project]
+name = "scribbulus"
+version = "0.1.0"
+description = "Production-grade media transcription tool with speaker diarization"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "Scribbulus Team" }]
+keywords = ["transcription", "speech-to-text", "whisper", "diarization", "audio", "video"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "click>=8.3.1",
+    "faster-whisper>=1.2.1",
+    "torch>=2.9.1",
+    "torchaudio>=2.9.1",
+    "pydub>=0.25.1",
+    "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+diarization = [
+    "whisperx>=3.7.4",
+]
+all = [
+    "scribbulus[diarization]",
+]
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.19",
+    "mypy>=1.19.1",
+    "mypy-extensions>=1.1.0",
+]
+
+lint = [
+    "bandit>=1.9.2",
+    "pre-commit>=4.5.1",
+    "pyupgrade>=3.21.2",
+    "ruff>=0.14.10",
+]
+
+test = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-env>=1.1.5",
+    "pytest-mock>=3.15.1",
+]
+
+[tool.uv]
+default-groups = ["dev", "lint", "test"]
+
+[project.scripts]
+scribbulus-transcribe = "scribbulus.cli.transcribe:main"
+
+[project.urls]
+Homepage = "https://github.com/Sawmonabo/scribbulus"
+Documentation = "https://github.com/Sawmonabo/scribbulus#readme"
+Repository = "https://github.com/Sawmonabo/scribbulus"
+Issues = "https://github.com/Sawmonabo/scribbulus/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scribbulus"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 79
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "B",   # bugbear
+    "C",   # complexity
+    "C4",  # comprehensions
+    "C90", # McCabe complexity (replaces "C")
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "ICN", # import conventions
+    "ISC", # implicit string concatenation
+    "N",   # pep8-naming
+    "PL",  # pylint
+    "PT",  # pytest
+    "RET", # flake8-return
+    "RUF", # ruff-specific rules
+    "SIM", # flake8-simplify
+    "T20", # flake8-print
+    "TID", # flake8-tidy-imports
+    "UP",  # pyupgrade
+    "W",   # pycodestyle warnings
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument
+    "B905",   # zip without explicit strict
+]
+extend-ignore = ["E203"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["scribbulus"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 79
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
