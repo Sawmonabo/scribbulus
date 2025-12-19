@@ -111,7 +111,8 @@ extend-ignore = ["E203"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
   "PLC0415",  # imports in functions for test isolation
-  "PLR2004"  # magic numbers are common in test assertions
+  "PLR2004",  # magic numbers are common in test assertions
+  "PT023"  # pytest incorrect mark parenthesis style
 ]
 "src/scribbulus/utils/deps.py" = [
   "PLC0415"  # centralized lazy imports for heavyweight ML libraries

@@ -11,18 +11,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from scribbulus.media.audio_prep import prepare_for_transcription
 from scribbulus.media.formats import validate_input_file
+from scribbulus.transcription.chunking import AudioChunker, ChunkingConfig
 from scribbulus.transcription.engine import (
     EngineConfig,
     TranscriptionEngine,
     TranscriptionOutput,
     transcribe_file,
 )
+from scribbulus.transcription.whisper_backend import Segment
 from scribbulus.utils.deps import (
     is_cuda_available,
     is_faster_whisper_available,
     is_torch_available,
 )
+from scribbulus.utils.errors import UnsupportedFormatError
 
 
 def ffmpeg_available() -> bool:
@@ -93,8 +97,6 @@ class TestAudioPrepPipeline:
         if sample_video is None:
             pytest.skip("Could not create sample video")
 
-        from scribbulus.media.audio_prep import prepare_for_transcription
-
         prepared_path, is_temp = prepare_for_transcription(
             sample_video,
             output_dir=temp_dir,
@@ -114,25 +116,23 @@ class TestAudioPrepPipeline:
         if sample_wav is None:
             pytest.skip("Could not create sample WAV")
 
-        from scribbulus.transcription.chunking import (
-            AudioChunker,
-            ChunkingConfig,
-        )
-
         config = ChunkingConfig(
             chunk_duration_sec=1.0,  # 1 second chunks for 3 second audio
             overlap_sec=0.1,
-            temp_dir=temp_dir,
         )
-        chunker = AudioChunker(config=config)
+        chunker = AudioChunker(config=config, temp_dir=temp_dir)
 
         try:
-            chunks = list(chunker.chunk_audio(sample_wav))
+            chunk_count = 0
+            for chunk in chunker.chunk_audio(sample_wav):
+                # Verify chunk exists during iteration (before cleanup)
+                assert chunk.path.exists(), f"Chunk {chunk.index} should exist"
+                chunk_count += 1
 
-            assert len(chunks) >= 2  # Should have multiple chunks
-            assert all(chunk.path.exists() for chunk in chunks)
+            assert chunk_count >= 2  # Should have multiple chunks
         finally:
             chunker.cleanup_all()
+            assert len(chunker._active_chunks) == 0  # All chunks cleaned up
 
 
 class TestTranscriptionEngine:
@@ -143,7 +143,7 @@ class TestTranscriptionEngine:
     """
 
     @requires_full_setup
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_transcribe_silent_audio(self, sample_wav, temp_dir):
         """Should transcribe silent audio (produces minimal output)."""
         if sample_wav is None:
@@ -245,8 +245,6 @@ class TestTranscriptionOutput:
 
     def test_format_transcript_basic(self):
         """Should format transcript without speakers."""
-        from scribbulus.transcription.whisper_backend import Segment
-
         segments = [
             Segment(start=0.0, end=2.0, text="Hello world."),
             Segment(start=2.0, end=4.0, text="How are you?"),
@@ -269,8 +267,6 @@ class TestTranscriptionOutput:
 
     def test_format_transcript_with_timestamps(self):
         """Should include timestamps when requested."""
-        from scribbulus.transcription.whisper_backend import Segment
-
         segments = [
             Segment(start=65.0, end=67.0, text="One minute in."),
         ]
@@ -338,8 +334,6 @@ class TestErrorRecovery:
         """Should handle corrupt files with clear error."""
         corrupt_file = temp_dir / "corrupt.mp4"
         corrupt_file.write_bytes(b"not a real video file")
-
-        from scribbulus.utils.errors import UnsupportedFormatError
 
         # The validation should fail for corrupt files
         with pytest.raises((UnsupportedFormatError, Exception)):

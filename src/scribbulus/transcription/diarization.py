@@ -11,7 +11,11 @@ from typing import TYPE_CHECKING, Any
 from scribbulus.utils.deps import cleanup_gpu_memory, get_device, get_whisperx
 from scribbulus.utils.errors import DiarizationError, HuggingFaceTokenError
 from scribbulus.utils.formatter import format_diarized_segments
-from scribbulus.utils.types import DeviceType, ResolvedDeviceType
+from scribbulus.utils.types import (
+    DeviceType,
+    DiarizationPipelineProtocol,
+    ResolvedDeviceType,
+)
 
 if TYPE_CHECKING:
     from scribbulus.transcription.whisper_backend import Segment
@@ -75,7 +79,7 @@ class SpeakerDiarizer:
         """
         self.hf_token = hf_token or os.environ.get("HF_TOKEN")
         self.device = device
-        self._diarize_model = None
+        self._diarize_model: DiarizationPipelineProtocol | None = None
         self._align_model = None
 
     def _get_device(self) -> ResolvedDeviceType:

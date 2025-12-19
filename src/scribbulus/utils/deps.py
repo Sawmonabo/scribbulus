@@ -21,14 +21,15 @@ from __future__ import annotations
 import gc
 import importlib.util
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import cast
 
 from scribbulus.utils.errors import DiarizationError, ModelNotFoundError
-from scribbulus.utils.types import DeviceType, ResolvedDeviceType
-
-if TYPE_CHECKING:
-    import types
-
+from scribbulus.utils.types import (
+    DeviceType,
+    ResolvedDeviceType,
+    WhisperModelProtocol,
+    WhisperXModuleProtocol,
+)
 
 # ---------------------------------------------------------------------------
 # Error message templates for consistent user guidance
@@ -185,7 +186,7 @@ def require_whisperx() -> None:
 # ---------------------------------------------------------------------------
 
 
-def get_whisperx() -> types.ModuleType:
+def get_whisperx() -> WhisperXModuleProtocol:
     """
     Get the whisperx module, raising a helpful error if not installed.
 
@@ -193,12 +194,12 @@ def get_whisperx() -> types.ModuleType:
     :raises DiarizationError: If whisperx is not installed.
     """
     require_whisperx()
-    import whisperx
+    import whisperx  # pyright: ignore[reportMissingImports]
 
-    return whisperx  # type: ignore[no-any-return]
+    return cast(WhisperXModuleProtocol, whisperx)
 
 
-def get_faster_whisper_model() -> type:
+def get_faster_whisper_model() -> type[WhisperModelProtocol]:
     """
     Get the WhisperModel class from faster-whisper.
 
@@ -208,4 +209,4 @@ def get_faster_whisper_model() -> type:
     require_faster_whisper()
     from faster_whisper import WhisperModel
 
-    return WhisperModel  # type: ignore[no-any-return]
+    return cast(type[WhisperModelProtocol], WhisperModel)

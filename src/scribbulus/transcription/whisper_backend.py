@@ -13,7 +13,12 @@ from scribbulus.utils.deps import (
     get_faster_whisper_model,
 )
 from scribbulus.utils.errors import ModelNotFoundError, TranscriptionError
-from scribbulus.utils.types import ComputeType, DeviceType, ModelSize
+from scribbulus.utils.types import (
+    ComputeType,
+    DeviceType,
+    ModelSize,
+    WhisperModelProtocol,
+)
 
 # Audio samples for 30 seconds at 16kHz (used for language detection)
 _LANG_DETECT_SAMPLES = 480000
@@ -96,7 +101,7 @@ class WhisperTranscriber:
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type
-        self._model = None
+        self._model: WhisperModelProtocol | None = None
 
     def _load_model(self) -> None:
         """Load the Whisper model lazily."""
@@ -199,8 +204,12 @@ class WhisperTranscriber:
                 )
                 full_text_parts.append(segment.text.strip())
 
-            # Calculate duration from last segment
-            duration = segments[-1].end if segments else 0.0
+            # Use actual audio duration from transcription info
+            duration = (
+                info.duration
+                if hasattr(info, "duration")
+                else (segments[-1].end if segments else 0.0)
+            )
 
             return TranscriptionResult(
                 text=" ".join(full_text_parts),
@@ -336,7 +345,7 @@ def detect_language(
 
             # Detect language
             _, probs = transcriber._model.model.detect_language(audio)
-            detected_lang = max(probs, key=probs.get)
+            detected_lang = max(probs, key=lambda x: probs[x])
             return detected_lang, probs[detected_lang]
 
         except Exception as e:

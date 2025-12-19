@@ -280,13 +280,10 @@ class TranscriptionEngine:
             for i, chunk in enumerate(chunker.chunk_audio(audio_path)):
                 # Report progress
                 progress = (i + 1) / total_chunks
-                self._report_progress(
-                    "Transcribing", progress * 0.9
-                )  # Leave 10% for merging
-
+                # Leave 10% for merging
+                self._report_progress("Transcribing", progress * 0.9)
                 # Transcribe chunk
                 result = self._transcriber.transcribe(chunk.path, config)
-
                 # Store first detected language
                 if detected_language is None:
                     detected_language = result.language
