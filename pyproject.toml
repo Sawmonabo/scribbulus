@@ -4,63 +4,41 @@ version = "0.1.0"
 description = "Production-grade media transcription tool with speaker diarization"
 readme = "README.md"
 requires-python = ">=3.13"
-license = { text = "MIT" }
-authors = [{ name = "Scribbulus Team" }]
-keywords = ["transcription", "speech-to-text", "whisper", "diarization", "audio", "video"]
+license = {text = "MIT"}
+authors = [{name = "Scribbulus Team"}]
+keywords = [
+  "transcription",
+  "speech-to-text",
+  "whisper",
+  "diarization",
+  "audio",
+  "video"
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Environment :: Console",
-    "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: MacOS",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Multimedia :: Sound/Audio :: Speech",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
-    "click>=8.3.1",
-    "faster-whisper>=1.2.1",
-    "torch>=2.9.1",
-    "torchaudio>=2.9.1",
-    "pydub>=0.25.1",
-    "tqdm>=4.67.1",
+  "click>=8.3.1",
+  "faster-whisper>=1.2.1",
+  "torch>=2.8.0,<2.9.0",
+  "torchaudio>=2.8.0,<2.9.0",
+  "pydub>=0.25.1",
+  "tqdm>=4.67.1"
 ]
 
 [project.optional-dependencies]
-diarization = [
-    "whisperx>=3.7.4",
-]
-all = [
-    "scribbulus[diarization]",
-]
-
-[dependency-groups]
-dev = [
-    "debugpy>=1.8.19",
-    "mypy>=1.19.1",
-    "mypy-extensions>=1.1.0",
-]
-
-lint = [
-    "bandit>=1.9.2",
-    "pre-commit>=4.5.1",
-    "pyupgrade>=3.21.2",
-    "ruff>=0.14.10",
-]
-
-test = [
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-    "pytest-cov>=7.0.0",
-    "pytest-env>=1.1.5",
-    "pytest-mock>=3.15.1",
-]
-
-[tool.uv]
-default-groups = ["dev", "lint", "test"]
+diarization = ["whisperx>=3.7.4"]
+all = ["scribbulus[diarization]"]
 
 [project.scripts]
 scribbulus-transcribe = "scribbulus.cli.transcribe:main"
@@ -71,9 +49,26 @@ Documentation = "https://github.com/Sawmonabo/scribbulus#readme"
 Repository = "https://github.com/Sawmonabo/scribbulus"
 Issues = "https://github.com/Sawmonabo/scribbulus/issues"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[dependency-groups]
+dev = ["debugpy>=1.8.19", "mypy>=1.19.1", "mypy-extensions>=1.1.0"]
+lint = [
+  "bandit[toml]>=1.8.0",
+  "codespell>=2.3.0",
+  "commitizen>=4.1.0",
+  "pre-commit>=4.0.0",
+  "pyupgrade>=3.19.0",
+  "ruff>=0.8.4"
+]
+test = [
+  "pytest>=9.0.2",
+  "pytest-asyncio>=1.3.0",
+  "pytest-cov>=7.0.0",
+  "pytest-env>=1.1.5",
+  "pytest-mock>=3.15.1"
+]
+
+[tool.uv]
+default-groups = ["dev", "lint", "test"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scribbulus"]
@@ -85,32 +80,41 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = [
-    "B",   # bugbear
-    "C",   # complexity
-    "C4",  # comprehensions
-    "C90", # McCabe complexity (replaces "C")
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "I",   # isort
-    "ICN", # import conventions
-    "ISC", # implicit string concatenation
-    "N",   # pep8-naming
-    "PL",  # pylint
-    "PT",  # pytest
-    "RET", # flake8-return
-    "RUF", # ruff-specific rules
-    "SIM", # flake8-simplify
-    "T20", # flake8-print
-    "TID", # flake8-tidy-imports
-    "UP",  # pyupgrade
-    "W",   # pycodestyle warnings
+  "B",  # bugbear
+  "C",  # complexity
+  "C4",  # comprehensions
+  "C90",  # McCabe complexity (replaces "C")
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  "I",  # isort
+  "ICN",  # import conventions
+  "ISC",  # implicit string concatenation
+  "N",  # pep8-naming
+  "PL",  # pylint
+  "PT",  # pytest
+  "RET",  # flake8-return
+  "RUF",  # ruff-specific rules
+  "SIM",  # flake8-simplify
+  "T20",  # flake8-print
+  "TID",  # flake8-tidy-imports
+  "UP",  # pyupgrade
+  "W"  # pycodestyle warnings
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # function call in default argument
-    "B905",   # zip without explicit strict
+  "E501",  # line too long (handled by formatter)
+  "B008",  # function call in default argument
+  "B905"  # zip without explicit strict
 ]
 extend-ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+  "PLC0415",  # imports in functions for test isolation
+  "PLR2004"  # magic numbers are common in test assertions
+]
+"src/scribbulus/utils/deps.py" = [
+  "PLC0415"  # centralized lazy imports for heavyweight ML libraries
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["scribbulus"]
@@ -135,6 +139,35 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests"
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = [
+  "B101"  # assert_used - acceptable in tests and dev code
+]
+targets = ["src"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_files = ["src/scribbulus/__init__.py:__version__"]
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_incremental = true
+major_version_zero = true
+allowed_prefixes = ["Merge", "Revert", "chore", "build", "ci"]
+
+[tool.commitizen.customize]
+message_template = "{{change_type}}{% if scope %}({{scope}}){% endif %}{% if is_breaking %}!{% endif %}: {{subject}}{% if body %}\n\n{{body}}{% endif %}{% if footer %}\n\n{{footer}}{% endif %}"
+
+[tool.codespell]
+skip = "*.lock,*.json,.git"
+ignore-words-list = "mot"
+check-filenames = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
