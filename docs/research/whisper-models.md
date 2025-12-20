@@ -139,3 +139,12 @@ print(f"Probability: {info.language_probability:.2%}")
 - [Whisper large-v3-turbo on Hugging Face](https://huggingface.co/openai/whisper-large-v3-turbo)
 - [OpenAI Whisper GitHub](https://github.com/openai/whisper)
 - [faster-whisper Documentation](https://github.com/SYSTRAN/faster-whisper)
+
+## Related Documents
+
+- [ADR-001: Whisper Engine](../architecture/adr/001-whisper-engine.md) - Decision
+  to use faster-whisper
+- [Feature: Transcription](../feature/transcription.md) - User-facing transcription
+  documentation
+- [Research: Speech-to-Text Options](./speech-to-text-options.md) - Comparison of
+  STT solutions

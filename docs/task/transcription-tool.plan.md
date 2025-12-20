@@ -1,3 +1,12 @@
+---
+task_id: transcription-tool
+status: completed
+created: 2025-12-14
+updated: 2025-12-19
+priority: high
+depends_on: []
+---
+
 # Transcription Tool - Design Plan
 
 ## Overview

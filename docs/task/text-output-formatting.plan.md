@@ -1,3 +1,13 @@
+---
+task_id: text-output-formatting
+status: completed
+created: 2025-12-19
+updated: 2025-12-19
+priority: medium
+depends_on:
+  - transcription-tool
+---
+
 # Text Output Formatting
 
 ## Summary

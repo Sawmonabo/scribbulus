@@ -206,3 +206,12 @@ diarize_model = whisperx.DiarizationPipeline(...)
 - [WhisperX GitHub](https://github.com/m-bain/whisperX)
 - [pyannote.audio Documentation](https://github.com/pyannote/pyannote-audio)
 - [pyannote Speaker Diarization](https://huggingface.co/pyannote/speaker-diarization-3.1)
+
+## Related Documents
+
+- [ADR-002: Diarization](../architecture/adr/002-diarization.md) - Decision to use
+  WhisperX for diarization
+- [Feature: Diarization](../feature/diarization.md) - User-facing diarization
+  documentation
+- [Component: Transcription Engine](../architecture/components/transcription-engine.md) -
+  Implementation details

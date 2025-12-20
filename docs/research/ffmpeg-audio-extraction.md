@@ -189,3 +189,9 @@ ffmpeg -i input.mp4 -ss 00:01:00 -to 00:02:00 -vn -c:a copy output.m4a
 - [FFmpeg Official Documentation](https://ffmpeg.org/ffmpeg.html)
 - [FFmpeg Codecs Documentation](https://ffmpeg.org/ffmpeg-codecs.html)
 - [FFprobe Documentation](https://ffmpeg.org/ffprobe.html)
+
+## Related Documents
+
+- [Component: Media Processor](../architecture/components/media-processor.md) -
+  FFmpeg integration implementation
+- [Feature: Transcription](../feature/transcription.md) - Supported input formats

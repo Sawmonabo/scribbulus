@@ -164,3 +164,12 @@ Reasons:
 - [faster-whisper PyPI](https://pypi.org/project/faster-whisper/)
 - [Vosk Official Website](https://alphacephei.com/vosk/)
 - [AssemblyAI Pricing](https://www.assemblyai.com/pricing)
+
+## Related Documents
+
+- [ADR-001: Whisper Engine](../architecture/adr/001-whisper-engine.md) - Decision
+  to use faster-whisper
+- [Feature: Transcription](../feature/transcription.md) - User-facing transcription
+  documentation
+- [Research: Whisper Models](./whisper-models.md) - Model size and performance
+  comparison

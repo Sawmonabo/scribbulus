@@ -37,8 +37,9 @@ MD013:
 MD024:
   siblings_only: true
 
-# MD025 - Single top-level heading: One H1 per document
-MD025: true
+# MD025 - Single top-level heading: Allow frontmatter title with H1
+MD025:
+  front_matter_title: ^\s*title\s*[:=]
 
 # MD026 - Trailing punctuation: Allow question marks
 MD026:
