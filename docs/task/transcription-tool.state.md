@@ -135,5 +135,5 @@ Slow tests (model loading) are marked with `@pytest.mark.slow`.
 ```bash
 make install
 export HF_TOKEN=your_token  # Optional, for diarization
-scribbulus-transcribe video.mp4 -o transcript.txt
+scribbulus transcribe video.mp4 -o transcript.txt
 ```

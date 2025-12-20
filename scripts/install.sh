@@ -125,10 +125,10 @@ log_info "Installation complete!"
 log_info "========================================"
 printf '\n'
 log_warn "Quick start:"
-printf '  scribbulus-transcribe video.mp4 -o transcript.txt\n'
+printf '  scribbulus transcribe video.mp4 -o transcript.txt\n'
 printf '\n'
 log_warn "For speaker diarization, set your HuggingFace token:"
 printf '  export HF_TOKEN=your_token_here\n'
 printf '\n'
 log_warn "Get help:"
-printf '  scribbulus-transcribe --help\n'
+printf '  scribbulus --help\n'

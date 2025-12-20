@@ -41,7 +41,7 @@ diarization = ["whisperx>=3.7.4"]
 all = ["scribbulus[diarization]"]
 
 [project.scripts]
-scribbulus-transcribe = "scribbulus.cli.transcribe:main"
+scribbulus = "scribbulus.cli.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/Sawmonabo/scribbulus"

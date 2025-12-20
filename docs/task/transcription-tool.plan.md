@@ -78,7 +78,7 @@ flowchart TD
 ## CLI Interface
 
 ```bash
-scribbulus-transcribe INPUT_FILE [OPTIONS]
+scribbulus transcribe INPUT_FILE [OPTIONS]
 
 Options:
   -o, --output PATH      Output file path (default: input_name.txt)

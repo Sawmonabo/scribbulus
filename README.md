@@ -89,57 +89,66 @@ Speaker diarization requires a HuggingFace token:
 
 ```bash
 # Transcribe a video file (output to stdout)
-scribbulus-transcribe video.mp4
+scribbulus transcribe video.mp4
 
 # Save output to a file
-scribbulus-transcribe video.mp4 -o transcript.txt
+scribbulus transcribe video.mp4 -o transcript.txt
 
 # Transcribe audio file
-scribbulus-transcribe podcast.mp3 -o transcript.txt
+scribbulus transcribe podcast.mp3 -o transcript.txt
 ```
 
 ### With Speaker Diarization
 
 ```bash
 # Requires HF_TOKEN to be set
-scribbulus-transcribe interview.mp4 -o transcript.txt
+scribbulus transcribe interview.mp4 -o transcript.txt
 
 # Specify number of speakers for better accuracy
-scribbulus-transcribe meeting.mp4 --num-speakers 3 -o transcript.txt
+scribbulus transcribe meeting.mp4 --num-speakers 3 -o transcript.txt
 ```
 
 ### Performance Options
 
 ```bash
 # Use a smaller, faster model
-scribbulus-transcribe audio.mp3 --model small
+scribbulus transcribe audio.mp3 --model small
 
 # Disable diarization for faster processing
-scribbulus-transcribe audio.mp3 --no-diarization
+scribbulus transcribe audio.mp3 --no-diarization
 
 # Force CPU inference
-scribbulus-transcribe audio.mp3 --device cpu
+scribbulus transcribe audio.mp3 --device cpu
 ```
 
 ### Advanced Options
 
 ```bash
 # Specify language (skip auto-detection)
-scribbulus-transcribe audio.mp3 -l en
+scribbulus transcribe audio.mp3 -l en
 
 # Include timestamps in output
-scribbulus-transcribe audio.mp3 --timestamps
+scribbulus transcribe audio.mp3 --timestamps
 
 # Verbose output with progress details
-scribbulus-transcribe audio.mp3 -v
+scribbulus transcribe audio.mp3 -v
 ```
 
 ### Full CLI Reference
 
 ```text
-Usage: scribbulus-transcribe [OPTIONS] INPUT_PATH
+# Main command
+Usage: scribbulus [OPTIONS] COMMAND [ARGS]...
 
-  Transcribe audio/video files to text.
+Commands:
+  transcribe  Transcribe audio/video files to text.
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+# Transcribe subcommand
+Usage: scribbulus transcribe [OPTIONS] INPUT_PATH
 
 Options:
   -o, --output PATH              Output .txt file path
@@ -157,7 +166,6 @@ Options:
   --chunk-duration FLOAT         Duration of audio chunks (seconds)
   --no-chunking                  Disable chunking
   -v, --verbose                  Enable verbose output
-  --version                      Show version
   --help                         Show this message and exit
 ```
 
@@ -273,9 +281,9 @@ Install ffmpeg:
 Try a smaller model or use CPU:
 
 ```bash
-scribbulus-transcribe audio.mp3 --model small
+scribbulus transcribe audio.mp3 --model small
 # or
-scribbulus-transcribe audio.mp3 --device cpu
+scribbulus transcribe audio.mp3 --device cpu
 ```
 
 ### Diarization Not Working
@@ -292,7 +300,7 @@ scribbulus-transcribe audio.mp3 --device cpu
 
 ## Architecture
 
-```text
+```bash
 scribbulus/
 ├── cli/
 │   └── transcribe.py      # CLI entrypoint

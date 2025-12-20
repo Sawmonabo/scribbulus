@@ -104,7 +104,7 @@ def write_output(
         click.echo(transcript)
 
 
-@click.command()
+@click.command("transcribe")
 @click.argument(
     "input_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -203,8 +203,7 @@ def write_output(
     envvar="SCRIBBULUS_NO_PROGRESS",
     help="Disable progress bars (auto-disabled in CI/non-TTY).",
 )
-@click.version_option(package_name="scribbulus")
-def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click options
+def transcribe(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click options
     input_path: Path,
     output_path: Path | None,
     language: str | None,
@@ -231,10 +230,10 @@ def main(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with Click o
       Audio: WAV, MP3, M4A, FLAC, OGG, AAC
 
     Examples:
-      scribbulus-transcribe video.mp4
-      scribbulus-transcribe interview.mov -o transcript.txt
-      scribbulus-transcribe podcast.mp3 --no-diarization
-      scribbulus-transcribe meeting.mp4 -l en --num-speakers 3
+      scribbulus transcribe video.mp4
+      scribbulus transcribe interview.mov -o transcript.txt
+      scribbulus transcribe podcast.mp3 --no-diarization
+      scribbulus transcribe meeting.mp4 -l en --num-speakers 3
     """
     setup_logging(verbose)
 
@@ -368,4 +367,4 @@ def _format_duration(seconds: float) -> str:
 
 
 if __name__ == "__main__":
-    main()
+    transcribe()

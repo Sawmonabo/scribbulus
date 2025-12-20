@@ -1,5 +1,6 @@
 """CLI module for scribbulus."""
 
-from scribbulus.cli.transcribe import main
+from scribbulus.cli.main import cli
+from scribbulus.cli.transcribe import transcribe
 
-__all__ = ["main"]
+__all__ = ["cli", "transcribe"]
