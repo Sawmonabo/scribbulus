@@ -1,19 +1,30 @@
 """Centralized dependency management and device detection utilities.
 
-This module provides reusable utilities for:
-- Checking availability of optional and required dependencies
-- Resolving compute devices (CPU/GPU)
-- Cleaning up GPU memory
-- Consistent error messages for missing dependencies
+Dependency Model
+================
 
-Design Principles:
-- Required dependencies (torch, faster-whisper) are declared in pyproject.toml
-  and should be present. Availability checks exist for graceful degradation
-  and clear error messaging.
-- Optional dependencies (whisperx) are extras and may not be installed.
-  Feature code should check availability before use.
-- Device detection is cached to avoid repeated probing.
-- All import mechanics are centralized here to keep business logic clean.
+REQUIRED DEPENDENCIES (always available after install):
+    torch          - ML inference, GPU detection, memory cleanup
+    faster-whisper - CTranslate2-optimized Whisper transcription
+    click          - CLI framework
+    tqdm           - Progress bars
+    pydub          - Audio manipulation (planned for future features)
+    torchaudio     - Audio processing (planned for future features)
+
+OPTIONAL DEPENDENCIES (extras):
+    whisperx [diarization] - Speaker diarization
+        Install: pip install scribbulus[diarization]
+        Check: is_whisperx_available()
+        Import: get_whisperx()
+
+EXTERNAL TOOLS:
+    ffmpeg/ffprobe - Required for audio/video processing
+
+Design Principles
+=================
+- Required deps are imported directly (guaranteed by pip/uv)
+- Optional deps use lazy imports with availability checks
+- Device detection cached for efficiency
 """
 
 from __future__ import annotations
@@ -21,29 +32,23 @@ from __future__ import annotations
 import gc
 import importlib.util
 from functools import lru_cache
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from scribbulus.utils.errors import DiarizationError, ModelNotFoundError
+import torch
+
+from scribbulus.utils.errors import DiarizationError
 from scribbulus.utils.types import (
     DeviceType,
     ResolvedDeviceType,
-    WhisperModelProtocol,
     WhisperXModuleProtocol,
 )
 
-# ---------------------------------------------------------------------------
-# Error message templates for consistent user guidance
-# ---------------------------------------------------------------------------
+if TYPE_CHECKING:
+    pass
 
-TORCH_IMPORT_ERROR = (
-    "PyTorch is not installed but is required. "
-    "Run: pip install torch torchaudio"
-)
-
-FASTER_WHISPER_IMPORT_ERROR = (
-    "faster-whisper is not installed but is required. "
-    "Run: pip install faster-whisper"
-)
+# ---------------------------------------------------------------------------
+# Error message templates for optional dependencies
+# ---------------------------------------------------------------------------
 
 WHISPERX_IMPORT_ERROR = (
     "whisperx is not installed. This is an optional dependency for "
@@ -53,28 +58,8 @@ WHISPERX_IMPORT_ERROR = (
 
 
 # ---------------------------------------------------------------------------
-# Package availability checks (cached)
+# Optional dependency availability check (cached)
 # ---------------------------------------------------------------------------
-
-
-@lru_cache(maxsize=1)
-def is_torch_available() -> bool:
-    """
-    Check if PyTorch is installed.
-
-    :returns: True if torch can be imported, False otherwise.
-    """
-    return importlib.util.find_spec("torch") is not None
-
-
-@lru_cache(maxsize=1)
-def is_faster_whisper_available() -> bool:
-    """
-    Check if faster-whisper is installed.
-
-    :returns: True if faster_whisper can be imported, False otherwise.
-    """
-    return importlib.util.find_spec("faster_whisper") is not None
 
 
 @lru_cache(maxsize=1)
@@ -92,16 +77,9 @@ def is_cuda_available() -> bool:
     """
     Check if CUDA is available for GPU acceleration.
 
-    Requires PyTorch to be installed. Returns False if PyTorch is not
-    available or CUDA is not configured.
-
     :returns: True if CUDA is available, False otherwise.
     """
-    if not is_torch_available():
-        return False
-    import torch
-
-    return bool(torch.cuda.is_available())
+    return torch.cuda.is_available()  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -132,41 +110,19 @@ def get_device(preferred: DeviceType = "auto") -> ResolvedDeviceType:
 
 def cleanup_gpu_memory() -> None:
     """
-    Clean up GPU memory if PyTorch/CUDA is available.
+    Clean up GPU memory.
 
-    Triggers Python garbage collection and clears the CUDA memory cache.
-    Safe to call even if PyTorch is not installed or CUDA is not available.
+    Triggers Python garbage collection and clears the CUDA memory cache
+    if CUDA is available.
     """
     gc.collect()
-    if is_cuda_available():
-        import torch
-
+    if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
 
 # ---------------------------------------------------------------------------
-# Dependency requirement assertions
+# Dependency requirement assertion (optional deps only)
 # ---------------------------------------------------------------------------
-
-
-def require_torch() -> None:
-    """
-    Assert that PyTorch is available, raising a helpful error if not.
-
-    :raises ModelNotFoundError: If PyTorch is not installed.
-    """
-    if not is_torch_available():
-        raise ModelNotFoundError("torch", TORCH_IMPORT_ERROR)
-
-
-def require_faster_whisper() -> None:
-    """
-    Assert that faster-whisper is available, raising a helpful error if not.
-
-    :raises ModelNotFoundError: If faster-whisper is not installed.
-    """
-    if not is_faster_whisper_available():
-        raise ModelNotFoundError("faster-whisper", FASTER_WHISPER_IMPORT_ERROR)
 
 
 def require_whisperx() -> None:
@@ -182,7 +138,7 @@ def require_whisperx() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Module getters for optional dependencies
+# Module getters
 # ---------------------------------------------------------------------------
 
 
@@ -199,14 +155,19 @@ def get_whisperx() -> WhisperXModuleProtocol:
     return cast(WhisperXModuleProtocol, whisperx)
 
 
-def get_faster_whisper_model() -> type[WhisperModelProtocol]:
+def get_diarization_pipeline() -> type:
     """
-    Get the WhisperModel class from faster-whisper.
+    Get the DiarizationPipeline class from whisperx.diarize submodule.
 
-    :returns: The WhisperModel class.
-    :raises ModelNotFoundError: If faster-whisper is not installed.
+    Note: DiarizationPipeline is not exported at the whisperx module level,
+    it must be imported from the whisperx.diarize submodule directly.
+
+    :returns: The DiarizationPipeline class.
+    :raises DiarizationError: If whisperx is not installed.
     """
-    require_faster_whisper()
-    from faster_whisper import WhisperModel
+    require_whisperx()
+    from whisperx.diarize import (
+        DiarizationPipeline,  # pyright: ignore[reportMissingImports]
+    )
 
-    return cast(type[WhisperModelProtocol], WhisperModel)
+    return DiarizationPipeline  # type: ignore[no-any-return]

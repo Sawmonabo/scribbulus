@@ -1,16 +1,6 @@
 #!/bin/bash
 # install.sh - Full Scribbulus installation
-#
-# Usage: ./scripts/install.sh [OPTIONS]
-#
-# Options:
-#   -f, --force    Force reinstall of dependencies
-#   -q, --quiet    Suppress non-error output
-#   -h, --help     Show this help message
-#
-# Exit codes:
-#   0  Success
-#   1  General error
+# Run with --help for usage information.
 
 set -o errexit
 set -o nounset
@@ -19,116 +9,136 @@ set -o pipefail
 # Get script directory for relative script calls
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Colors
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[0;33m'
-readonly RED='\033[0;31m'
-readonly NC='\033[0m'
+# Source shared libraries
+# shellcheck source=lib/output.sh
+source "${SCRIPT_DIR}/lib/output.sh"
+# shellcheck source=lib/platform.sh
+source "${SCRIPT_DIR}/lib/platform.sh"
+# shellcheck source=lib/args.sh
+source "${SCRIPT_DIR}/lib/args.sh"
 
-# Defaults
-FORCE=0
-QUIET=0
-FORCE_FLAG=""
-QUIET_FLAG=""
-
-# Print help message from script header
+# Print help message
 show_help() {
-    sed -n '2,13p' "$0" | sed 's/^# //' | sed 's/^#//'
+    cat <<'EOF'
+install.sh - Full Scribbulus installation
+
+Usage: ./scripts/install.sh [OPTIONS] [COMPONENT]
+
+Components:
+  --all      Install everything (default)
+  --uv       Install only uv package manager
+  --ffmpeg   Install only ffmpeg
+  --deps     Install only system dependencies (ffmpeg)
+
+Options:
+  -f, --force    Force reinstall of dependencies
+  -q, --quiet    Suppress non-error output
+  -h, --help     Show this help message
+
+Exit codes:
+  0  Success
+  1  General error
+EOF
 }
 
-# Logging functions
-log_info() {
-    if [[ "${QUIET}" -eq 0 ]]; then
-        printf '%b%s%b\n' "${GREEN}" "$1" "${NC}"
+# Parse arguments (FORCE and QUIET exported by args.sh)
+parse_args "$@"
+
+# Default to --all if no component specified
+if [[ "${INSTALL_UV}" -eq 0 ]] && \
+   [[ "${INSTALL_FFMPEG}" -eq 0 ]] && \
+   [[ "${INSTALL_DEPS}" -eq 0 ]] && \
+   [[ "${INSTALL_ALL}" -eq 0 ]]; then
+    INSTALL_ALL=1
+fi
+
+# Build flags for child scripts
+CHILD_FLAGS=()
+[[ "${FORCE}" -eq 1 ]] && CHILD_FLAGS+=("--force")
+[[ "${QUIET}" -eq 1 ]] && CHILD_FLAGS+=("--quiet")
+
+# =============================================================================
+# Installation Functions
+# =============================================================================
+
+install_uv() {
+    log_step "Installing uv package manager..."
+    "${SCRIPT_DIR}/install-uv.sh" "${CHILD_FLAGS[@]+"${CHILD_FLAGS[@]}"}"
+
+    # Ensure uv is available (may need to source env)
+    if ! has_command uv; then
+        if [[ -f "${HOME}/.local/bin/env" ]]; then
+            # shellcheck disable=SC1091 # File may not exist at lint time
+            source "${HOME}/.local/bin/env"
+        fi
+    fi
+
+    # Verify uv is now available
+    if ! has_command uv; then
+        log_error "uv is still not available after installation."
+        log_error "Please restart your shell and run this script again."
+        exit 1
     fi
 }
 
-log_warn() {
-    if [[ "${QUIET}" -eq 0 ]]; then
-        printf '%b%s%b\n' "${YELLOW}" "$1" "${NC}"
+install_ffmpeg() {
+    if ! has_command ffmpeg || [[ "${FORCE}" -eq 1 ]]; then
+        log_step "Installing ffmpeg..."
+        "${SCRIPT_DIR}/install-ffmpeg.sh" "${CHILD_FLAGS[@]+"${CHILD_FLAGS[@]}"}"
+    else
+        log_info "ffmpeg is already installed."
     fi
 }
 
-log_error() {
-    printf '%b%s%b\n' "${RED}" "$1" "${NC}" >&2
+install_python_package() {
+    log_step "Installing scribbulus Python package..."
+    uv sync
+    uv pip install -e .
 }
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -f|--force)
-            FORCE=1
-            FORCE_FLAG="--force"
-            shift
-            ;;
-        -q|--quiet)
-            QUIET=1
-            QUIET_FLAG="--quiet"
-            shift
-            ;;
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            printf 'Use --help for usage.\n'
-            exit 1
-            ;;
-    esac
-done
+# =============================================================================
+# Main Installation Logic
+# =============================================================================
 
-log_info "=== Scribbulus Installation ==="
-if [[ "${QUIET}" -eq 0 ]]; then
-    printf '\n'
+log_success "=== Scribbulus Installation ==="
+log_blank
+
+# Handle component-specific installation
+if [[ "${INSTALL_ALL}" -eq 1 ]]; then
+    # Full installation
+    log_step "Step 1/3: Installing uv package manager..."
+    install_uv
+
+    log_step "Step 2/3: Checking ffmpeg..."
+    install_ffmpeg
+
+    log_step "Step 3/3: Installing Python package..."
+    install_python_package
+
+    # Success message
+    log_blank
+    log_success "========================================"
+    log_success "Installation complete!"
+    log_success "========================================"
+    log_blank
+    log_warn "Quick start:"
+    printf '  scribbulus transcribe video.mp4 -o transcript.txt\n'
+    log_blank
+    log_warn "For speaker diarization, set your HuggingFace token:"
+    printf '  export HF_TOKEN=your_token_here\n'
+    log_blank
+    log_warn "Get help:"
+    printf '  scribbulus --help\n'
+
+elif [[ "${INSTALL_UV}" -eq 1 ]]; then
+    install_uv
+    log_success "uv installation complete!"
+
+elif [[ "${INSTALL_FFMPEG}" -eq 1 ]]; then
+    install_ffmpeg
+    log_success "ffmpeg installation complete!"
+
+elif [[ "${INSTALL_DEPS}" -eq 1 ]]; then
+    install_ffmpeg
+    log_success "System dependencies installation complete!"
 fi
-
-# Step 1: Install uv
-log_info "Step 1/3: Installing uv package manager..."
-# shellcheck disable=SC2086 # Word splitting intended for flags
-"${SCRIPT_DIR}/install-uv.sh" ${FORCE_FLAG} ${QUIET_FLAG}
-
-# Ensure uv is available (may need to source env)
-if ! command -v uv &> /dev/null; then
-    if [[ -f "${HOME}/.local/bin/env" ]]; then
-        # shellcheck disable=SC1091 # File may not exist at lint time
-        source "${HOME}/.local/bin/env"
-    fi
-fi
-
-# Verify uv is now available
-if ! command -v uv &> /dev/null; then
-    log_error "uv is still not available after installation."
-    log_error "Please restart your shell and run this script again."
-    exit 1
-fi
-
-# Step 2: Install ffmpeg if not present
-log_info "Step 2/3: Checking ffmpeg..."
-if ! command -v ffmpeg &> /dev/null || [[ "${FORCE}" -eq 1 ]]; then
-    log_warn "Installing ffmpeg..."
-    # shellcheck disable=SC2086 # Word splitting intended for flags
-    "${SCRIPT_DIR}/install-ffmpeg.sh" ${FORCE_FLAG} ${QUIET_FLAG}
-else
-    log_info "ffmpeg is already installed."
-fi
-
-# Step 3: Install Python package
-log_info "Step 3/3: Installing scribbulus Python package..."
-uv sync
-uv pip install -e .
-
-# Success message
-printf '\n'
-log_info "========================================"
-log_info "Installation complete!"
-log_info "========================================"
-printf '\n'
-log_warn "Quick start:"
-printf '  scribbulus transcribe video.mp4 -o transcript.txt\n'
-printf '\n'
-log_warn "For speaker diarization, set your HuggingFace token:"
-printf '  export HF_TOKEN=your_token_here\n'
-printf '\n'
-log_warn "Get help:"
-printf '  scribbulus --help\n'

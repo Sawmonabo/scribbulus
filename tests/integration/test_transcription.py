@@ -21,11 +21,7 @@ from scribbulus.transcription.engine import (
     transcribe_file,
 )
 from scribbulus.transcription.whisper_backend import Segment
-from scribbulus.utils.deps import (
-    is_cuda_available,
-    is_faster_whisper_available,
-    is_torch_available,
-)
+from scribbulus.utils.deps import is_cuda_available
 from scribbulus.utils.errors import UnsupportedFormatError
 
 
@@ -40,25 +36,15 @@ skip_if_no_ffmpeg = pytest.mark.skipif(
     reason="ffmpeg not installed",
 )
 
-skip_if_no_whisper = pytest.mark.skipif(
-    not is_faster_whisper_available(),
-    reason="faster-whisper not installed",
-)
-
-skip_if_no_torch = pytest.mark.skipif(
-    not is_torch_available(),
-    reason="torch not installed",
-)
-
 skip_if_no_cuda = pytest.mark.skipif(
     not is_cuda_available(),
     reason="CUDA not available",
 )
 
-# Integration tests require all dependencies
+# Integration tests require ffmpeg (torch and faster-whisper are required Python deps)
 requires_full_setup = pytest.mark.skipif(
-    not (ffmpeg_available() and is_faster_whisper_available()),
-    reason="Requires ffmpeg and faster-whisper",
+    not ffmpeg_available(),
+    reason="Requires ffmpeg",
 )
 
 

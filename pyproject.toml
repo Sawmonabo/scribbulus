@@ -31,8 +31,8 @@ dependencies = [
   "click>=8.3.1",
   "faster-whisper>=1.2.1",
   "torch>=2.8.0,<2.9.0",
-  "torchaudio>=2.8.0,<2.9.0",
-  "pydub>=0.25.1",
+  "torchaudio>=2.8.0,<2.9.0",  # Planned: future audio processing
+  "pydub>=0.25.1",  # Planned: future audio manipulation
   "tqdm>=4.67.1"
 ]
 
@@ -50,20 +50,24 @@ Repository = "https://github.com/Sawmonabo/scribbulus"
 Issues = "https://github.com/Sawmonabo/scribbulus/issues"
 
 [dependency-groups]
-dev = ["debugpy>=1.8.19", "mypy>=1.19.1", "mypy-extensions>=1.1.0"]
+dev = [
+  "debugpy>=1.8.19",
+  "mypy>=1.19.1",
+  "mypy-extensions>=1.1.0"
+]
 lint = [
-  "bandit[toml]>=1.8.0",
-  "codespell>=2.3.0",
-  "commitizen>=4.1.0",
-  "pre-commit>=4.0.0",
-  "pyupgrade>=3.19.0",
-  "ruff>=0.8.4"
+  "bandit[toml]>=1.9.2",
+  "codespell>=2.4.1",
+  "commitizen>=4.10.1",
+  "pre-commit>=4.5.1",
+  "pyupgrade>=3.21.2",
+  "ruff>=0.14.10"
 ]
 test = [
   "pytest>=9.0.2",
   "pytest-asyncio>=1.3.0",
   "pytest-cov>=7.0.0",
-  "pytest-env>=1.1.5",
+  "pytest-env>=1.2.0",
   "pytest-mock>=3.15.1"
 ]
 
@@ -173,6 +177,22 @@ message_template = "{{change_type}}{% if scope %}({{scope}}){% endif %}{% if is_
 skip = "*.lock,*.json,.git"
 ignore-words-list = "mot"
 check-filenames = true
+
+[tool.scribbulus]
+# External system dependencies required at runtime
+# These are not Python packages and must be installed separately
+# See: https://peps.python.org/pep-0725/ (future standard)
+#
+# Installation:
+# macOS:         brew install ffmpeg
+# Ubuntu/Debian: sudo apt install ffmpeg
+# Fedora:        sudo dnf install ffmpeg
+# Windows:       winget install Gyan.FFmpeg
+# Or run:        make install-ffmpeg
+system-dependencies = [
+  "ffmpeg",  # Required - audio/video processing
+  "ffprobe"  # Required - media metadata (bundled with ffmpeg)
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -7,11 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 
-from scribbulus.utils.deps import (
-    cleanup_gpu_memory,
-    get_device,
-    get_faster_whisper_model,
-)
+from faster_whisper import WhisperModel
+
+from scribbulus.utils.deps import cleanup_gpu_memory, get_device
 from scribbulus.utils.errors import ModelNotFoundError, TranscriptionError
 from scribbulus.utils.types import (
     ComputeType,
@@ -108,9 +106,6 @@ class WhisperTranscriber:
         if self._model is not None:
             return
 
-        # Get model class (raises ModelNotFoundError if not installed)
-        whisper_model_cls = get_faster_whisper_model()
-
         # Determine device using centralized utility
         device = get_device(self.device)
 
@@ -120,7 +115,7 @@ class WhisperTranscriber:
             compute_type = "float16" if device == "cuda" else "int8"
 
         try:
-            self._model = whisper_model_cls(
+            self._model = WhisperModel(
                 self.model_size,
                 device=device,
                 compute_type=compute_type,
@@ -143,7 +138,7 @@ class WhisperTranscriber:
         :raises ModelNotFoundError: If the model cannot be loaded.
         """
         self._load_model()
-        assert self._model is not None  # Guaranteed by _load_model
+        assert self._model is not None
         config = config or TranscriptionConfig()
 
         audio_path = Path(audio_path)
@@ -243,7 +238,7 @@ class WhisperTranscriber:
         :raises TranscriptionError: If transcription fails.
         """
         self._load_model()
-        assert self._model is not None  # Guaranteed by _load_model
+        assert self._model is not None
         config = config or TranscriptionConfig()
 
         audio_path = Path(audio_path)
@@ -334,7 +329,7 @@ def detect_language(
     """
     with WhisperTranscriber(model_size=model_size) as transcriber:
         transcriber._load_model()
-        assert transcriber._model is not None  # Guaranteed by _load_model
+        assert transcriber._model is not None
 
         try:
             # Load audio and detect language

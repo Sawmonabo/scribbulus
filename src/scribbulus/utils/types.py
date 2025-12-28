@@ -126,13 +126,12 @@ class DiarizationPipelineProtocol(Protocol):
 
 
 class WhisperXModuleProtocol(Protocol):
-    """Protocol for whisperx module interface."""
+    """Protocol for whisperx module interface.
 
-    def DiarizationPipeline(  # noqa: N802 - matches external API
-        self,
-        use_auth_token: str | None = None,
-        device: str = "cpu",
-    ) -> DiarizationPipelineProtocol: ...
+    Note: DiarizationPipeline is NOT exported at module level in whisperx.
+    It must be imported from whisperx.diarize submodule directly.
+    Use get_diarization_pipeline() from deps.py instead.
+    """
 
     def load_audio(self, audio_path: str) -> Any: ...
 

@@ -15,6 +15,7 @@ from scribbulus.transcription.engine import (
     TranscriptionEngine,
     TranscriptionOutput,
 )
+from scribbulus.utils.deps import is_whisperx_available
 from scribbulus.utils.errors import (
     FFmpegNotFoundError,
     NoAudioStreamError,
@@ -295,11 +296,13 @@ def transcribe(  # noqa: C901, PLR0912, PLR0913, PLR0915 - CLI entrypoint with C
             click.echo(f"Speakers: {len(output.speakers)} detected", err=True)
 
         # Write output
+        # Auto-enable timestamps when diarization extra (whisperx) is installed
+        include_timestamps = timestamps or is_whisperx_available()
         write_output(
             output,
             output_path,
             include_speakers=not no_speakers and output.has_diarization,
-            include_timestamps=timestamps,
+            include_timestamps=include_timestamps,
         )
 
         sys.exit(EXIT_SUCCESS)

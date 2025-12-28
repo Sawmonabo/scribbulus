@@ -1,92 +1,58 @@
 #!/bin/bash
 # install-ffmpeg.sh - Cross-platform FFmpeg installer for Scribbulus
-#
-# Usage: ./scripts/install-ffmpeg.sh [OPTIONS]
-#
-# Options:
-#   -f, --force    Force reinstall even if ffmpeg is present
-#   -q, --quiet    Suppress non-error output
-#   -h, --help     Show this help message
-#
-# Supports:
-#   - macOS (via Homebrew)
-#   - Ubuntu/Debian (via apt)
-#   - Fedora (via dnf)
-#   - Arch Linux (via pacman)
-#   - openSUSE (via zypper)
-#   - Alpine (via apk)
-#
-# Exit codes:
-#   0  Success (installed or already present)
-#   1  General error
-#   2  Missing dependency (e.g., Homebrew)
+# Run with --help for usage information.
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-# Colors
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[0;33m'
-readonly RED='\033[0;31m'
-readonly NC='\033[0m'
+# Get script directory for relative script calls
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Defaults
-FORCE=0
-QUIET=0
+# Source shared libraries
+# shellcheck source=lib/output.sh
+source "${SCRIPT_DIR}/lib/output.sh"
+# shellcheck source=lib/platform.sh
+source "${SCRIPT_DIR}/lib/platform.sh"
+# shellcheck source=lib/args.sh
+source "${SCRIPT_DIR}/lib/args.sh"
 
-# Print help message from script header
+# Print help message
 show_help() {
-    sed -n '2,22p' "$0" | sed 's/^# //' | sed 's/^#//'
+    cat <<'EOF'
+install-ffmpeg.sh - Cross-platform FFmpeg installer for Scribbulus
+
+Usage: ./scripts/install-ffmpeg.sh [OPTIONS]
+
+Options:
+  -f, --force    Force reinstall even if ffmpeg is present
+  -q, --quiet    Suppress non-error output
+  -h, --help     Show this help message
+
+Supports:
+  - macOS (via Homebrew)
+  - Ubuntu/Debian (via apt)
+  - Fedora (via dnf)
+  - Arch Linux (via pacman)
+  - openSUSE (via zypper)
+  - Alpine (via apk)
+  - Windows (via winget, Chocolatey, or Scoop)
+
+Exit codes:
+  0  Success (installed or already present)
+  1  General error
+  2  Missing dependency (e.g., Homebrew, package manager)
+EOF
 }
 
-# Logging functions
-log_info() {
-    if [[ "${QUIET}" -eq 0 ]]; then
-        printf '%b%s%b\n' "${GREEN}" "$1" "${NC}"
-    fi
-}
+# Parse arguments (FORCE and QUIET exported by args.sh)
+parse_args "$@"
 
-log_warn() {
-    if [[ "${QUIET}" -eq 0 ]]; then
-        printf '%b%s%b\n' "${YELLOW}" "$1" "${NC}"
-    fi
-}
-
-log_error() {
-    printf '%b%s%b\n' "${RED}" "$1" "${NC}" >&2
-}
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -f|--force)
-            FORCE=1
-            shift
-            ;;
-        -q|--quiet)
-            QUIET=1
-            shift
-            ;;
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            printf 'Use --help for usage.\n'
-            exit 1
-            ;;
-    esac
-done
-
-log_info "=== FFmpeg Installer for Scribbulus ==="
-if [[ "${QUIET}" -eq 0 ]]; then
-    printf '\n'
-fi
+log_success "=== FFmpeg Installer for Scribbulus ==="
+log_blank
 
 # Check if ffmpeg is already installed
-if command -v ffmpeg &> /dev/null; then
+if has_command ffmpeg; then
     log_info "FFmpeg is already installed:"
     if [[ "${QUIET}" -eq 0 ]]; then
         ffmpeg -version | head -1
@@ -98,125 +64,144 @@ if command -v ffmpeg &> /dev/null; then
     log_warn "Force reinstall requested..."
 fi
 
-# Detect OS
-os_name="$(uname -s)"
-log_warn "Detected OS: ${os_name}"
+# Show detected platform info
+log_step "Detected: ${OS_TYPE} with ${PKG_MANAGER} package manager"
+log_blank
 
-case "${os_name}" in
-    Darwin)
-        printf 'Platform: macOS\n'
-        printf '\n'
+# =============================================================================
+# Platform-specific installation
+# =============================================================================
 
-        # Check for Homebrew
-        if ! command -v brew &> /dev/null; then
-            log_error "Error: Homebrew not found"
-            printf '\n'
+case "${OS_TYPE}" in
+    macos)
+        if [[ "${PKG_MANAGER}" != "brew" ]]; then
+            log_error "Homebrew not found"
+            log_blank
             printf 'Homebrew is required to install FFmpeg on macOS.\n'
             printf 'Install Homebrew first:\n'
-            printf '\n'
+            log_blank
             # shellcheck disable=SC2016 # Intentionally unexpanded - showing literal command
             printf '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\n'
-            printf '\n'
+            log_blank
             exit 2
         fi
 
-        printf 'Installing FFmpeg via Homebrew...\n'
+        log_step "Installing FFmpeg via Homebrew..."
         brew install ffmpeg
         ;;
 
-    Linux)
-        printf 'Platform: Linux\n'
-        printf '\n'
-
-        # Detect package manager and install
-        if command -v apt &> /dev/null; then
-            printf 'Package manager: apt (Debian/Ubuntu)\n'
-            printf 'Installing FFmpeg...\n'
-            sudo apt update
-            sudo apt install -y ffmpeg
-
-        elif command -v dnf &> /dev/null; then
-            printf 'Package manager: dnf (Fedora)\n'
-            printf 'Installing FFmpeg...\n'
-            sudo dnf install -y ffmpeg
-
-        elif command -v pacman &> /dev/null; then
-            printf 'Package manager: pacman (Arch Linux)\n'
-            printf 'Installing FFmpeg...\n'
-            sudo pacman -S --noconfirm ffmpeg
-
-        elif command -v zypper &> /dev/null; then
-            printf 'Package manager: zypper (openSUSE)\n'
-            printf 'Installing FFmpeg...\n'
-            sudo zypper install -y ffmpeg
-
-        elif command -v apk &> /dev/null; then
-            printf 'Package manager: apk (Alpine)\n'
-            printf 'Installing FFmpeg...\n'
-            sudo apk add ffmpeg
-
-        else
-            log_error "Error: No supported package manager found"
-            printf '\n'
-            printf 'Please install FFmpeg manually for your distribution.\n'
-            printf 'Visit: https://ffmpeg.org/download.html\n'
-            exit 1
-        fi
+    linux|wsl)
+        case "${PKG_MANAGER}" in
+            apt)
+                log_step "Installing FFmpeg via apt..."
+                run_privileged apt update
+                run_privileged apt install -y ffmpeg
+                ;;
+            dnf)
+                log_step "Installing FFmpeg via dnf..."
+                run_privileged dnf install -y ffmpeg
+                ;;
+            yum)
+                log_step "Installing FFmpeg via yum..."
+                run_privileged yum install -y ffmpeg
+                ;;
+            pacman)
+                log_step "Installing FFmpeg via pacman..."
+                run_privileged pacman -S --noconfirm ffmpeg
+                ;;
+            zypper)
+                log_step "Installing FFmpeg via zypper..."
+                run_privileged zypper install -y ffmpeg
+                ;;
+            apk)
+                log_step "Installing FFmpeg via apk..."
+                run_privileged apk add ffmpeg
+                ;;
+            *)
+                log_error "No supported package manager found"
+                log_blank
+                printf 'Please install FFmpeg manually for your distribution.\n'
+                printf 'Visit: https://ffmpeg.org/download.html\n'
+                exit 2
+                ;;
+        esac
         ;;
 
-    CYGWIN*|MINGW*|MSYS*)
-        printf 'Platform: Windows (via Cygwin/MinGW/MSYS)\n'
-        printf '\n'
-        log_warn "Note: Windows support is best-effort."
-        printf '\n'
-        printf 'Recommended installation methods for Windows:\n'
-        printf '\n'
-        printf '1. Using Chocolatey:\n'
-        printf '   choco install ffmpeg\n'
-        printf '\n'
-        printf '2. Using Scoop:\n'
-        printf '   scoop install ffmpeg\n'
-        printf '\n'
-        printf '3. Manual download:\n'
-        printf '   https://ffmpeg.org/download.html#build-windows\n'
-        printf '\n'
-        exit 1
+    windows)
+        case "${PKG_MANAGER}" in
+            winget)
+                log_step "Installing FFmpeg via winget..."
+                winget install --silent --accept-package-agreements --accept-source-agreements Gyan.FFmpeg
+                ;;
+            choco)
+                log_step "Installing FFmpeg via Chocolatey..."
+                choco install -y ffmpeg
+                ;;
+            scoop)
+                log_step "Installing FFmpeg via Scoop..."
+                scoop install ffmpeg
+                ;;
+            *)
+                log_warn "No Windows package manager found (winget, choco, scoop)"
+                log_blank
+                printf 'Recommended installation methods for Windows:\n'
+                log_blank
+                printf '1. Using winget (Windows Package Manager):\n'
+                printf '   winget install Gyan.FFmpeg\n'
+                log_blank
+                printf '2. Using Chocolatey:\n'
+                printf '   choco install ffmpeg\n'
+                log_blank
+                printf '3. Using Scoop:\n'
+                printf '   scoop install ffmpeg\n'
+                log_blank
+                printf '4. Manual download:\n'
+                printf '   https://ffmpeg.org/download.html#build-windows\n'
+                log_blank
+                exit 2
+                ;;
+        esac
         ;;
 
     *)
-        log_error "Error: Unsupported operating system: ${os_name}"
-        printf '\n'
+        log_error "Unsupported operating system: ${OS_TYPE}"
+        log_blank
         printf 'Please install FFmpeg manually.\n'
         printf 'Visit: https://ffmpeg.org/download.html\n'
         exit 1
         ;;
 esac
 
+# =============================================================================
 # Verify installation
-printf '\n'
-log_info "Verifying installation..."
+# =============================================================================
 
-if command -v ffmpeg &> /dev/null; then
-    log_info "FFmpeg installed successfully!"
-    printf '\n'
-    ffmpeg -version | head -3
-    printf '\n'
+log_blank
+log_step "Verifying installation..."
+
+if has_command ffmpeg; then
+    log_success "FFmpeg installed successfully!"
+    log_blank
+    if [[ "${QUIET}" -eq 0 ]]; then
+        ffmpeg -version | head -3
+    fi
+    log_blank
 
     # Check for ffprobe
-    if command -v ffprobe &> /dev/null; then
+    if has_command ffprobe; then
         log_info "ffprobe is also available."
     else
         log_warn "Warning: ffprobe not found. Some features may not work."
     fi
 else
-    log_error "Error: FFmpeg installation failed"
+    log_error "FFmpeg installation failed"
     exit 1
 fi
 
-printf '\n'
-log_info "=== Installation Complete ==="
-printf '\n'
+log_blank
+log_success "=== Installation Complete ==="
+log_blank
 printf 'You can now use Scribbulus for audio/video transcription.\n'
-printf '\n'
+log_blank
 printf 'Quick start:\n'
 printf '  scribbulus transcribe video.mp4 -o transcript.txt\n'

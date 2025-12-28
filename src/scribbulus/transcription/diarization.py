@@ -8,7 +8,12 @@ from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
-from scribbulus.utils.deps import cleanup_gpu_memory, get_device, get_whisperx
+from scribbulus.utils.deps import (
+    cleanup_gpu_memory,
+    get_device,
+    get_diarization_pipeline,
+    get_whisperx,
+)
 from scribbulus.utils.errors import DiarizationError, HuggingFaceTokenError
 from scribbulus.utils.formatter import format_diarized_segments
 from scribbulus.utils.types import (
@@ -94,12 +99,13 @@ class SpeakerDiarizer:
         if not self.hf_token:
             raise HuggingFaceTokenError()
 
-        # Get whisperx module (raises DiarizationError if not installed)
-        whisperx = get_whisperx()
+        # Get DiarizationPipeline class from whisperx.diarize submodule
+        # (raises DiarizationError if whisperx not installed)
+        DiarizationPipeline = get_diarization_pipeline()  # noqa: N806
 
         try:
             device = self._get_device()
-            self._diarize_model = whisperx.DiarizationPipeline(
+            self._diarize_model = DiarizationPipeline(
                 use_auth_token=self.hf_token,
                 device=device,
             )
@@ -138,20 +144,16 @@ class SpeakerDiarizer:
         :raises HuggingFaceTokenError: If HF token is missing.
         """
         self._load_diarize_model()
-        assert (
-            self._diarize_model is not None
-        )  # Guaranteed by _load_diarize_model
+        assert self._diarize_model is not None
 
         audio_path = Path(audio_path)
         if not audio_path.exists():
             raise DiarizationError(f"Audio file not found: {audio_path}")
 
-        # Get whisperx module (raises DiarizationError if not installed)
         whisperx = get_whisperx()
         device = self._get_device()
 
         try:
-            # Load audio
             audio = whisperx.load_audio(str(audio_path))
 
             # Convert segments to whisperx format

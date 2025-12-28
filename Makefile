@@ -7,7 +7,7 @@ YELLOW := \033[0;33m
 NC := \033[0m
 
 .PHONY: help install install-uv install-ffmpeg install-deps dev test test-cov \
-        lint format typecheck clean clean-all check-uv check-ffmpeg
+        lint lint-ruff lint-shell format typecheck clean clean-all check-uv check-ffmpeg
 
 help:
 	@echo "$(GREEN)Scribbulus - Media Transcription Tool$(NC)"
@@ -21,7 +21,9 @@ help:
 	@echo "$(YELLOW)Development:$(NC)"
 	@echo "  make test          Run tests"
 	@echo "  make test-cov      Run tests with coverage"
-	@echo "  make lint          Run linter (ruff)"
+	@echo "  make lint          Run all linters (ruff, shellcheck, mypy)"
+	@echo "  make lint-ruff     Run Python linter only (ruff)"
+	@echo "  make lint-shell    Run shell script linter only (shellcheck)"
 	@echo "  make format        Auto-format code"
 	@echo "  make typecheck     Run type checker (mypy)"
 	@echo ""
@@ -33,16 +35,17 @@ help:
 # Installation (delegated to scripts)
 # =============================================================================
 
-install-uv:
-	@./scripts/install-uv.sh
-
-install-ffmpeg:
-	@./scripts/install-ffmpeg.sh
-
 install:
 	@./scripts/install.sh
 
-install-deps: install-ffmpeg
+install-uv:
+	@./scripts/install.sh --uv
+
+install-ffmpeg:
+	@./scripts/install.sh --ffmpeg
+
+install-deps:
+	@./scripts/install.sh --deps
 
 # =============================================================================
 # Validation
@@ -80,13 +83,17 @@ test-cov: check-uv
 	@echo "$(GREEN)Running tests with coverage...$(NC)"
 	@uv run pytest tests/ -v --cov=src/scribbulus --cov-report=html --cov-report=term
 
-lint: check-uv
-	@echo "$(GREEN)Running linter...$(NC)"
+lint: lint-ruff lint-shell typecheck
+
+lint-ruff: check-uv
+	@echo "$(GREEN)Running ruff linter...$(NC)"
 	@uv run ruff check src/ tests/
 	@uv run ruff format --check src/ tests/
-	@echo "$(GREEN)Running markdown linter...$(NC)"
-	@npx markdownlint-cli "docs/**/*.md" "*.md" 2>/dev/null || \
-		echo "$(YELLOW)Note: Install markdownlint-cli for markdown linting$(NC)"
+
+lint-shell:
+	@echo "$(GREEN)Running shell script linter...$(NC)"
+	@shellcheck --severity=warning scripts/*.sh scripts/lib/*.sh
+	@echo "$(GREEN)Shell scripts passed!$(NC)"
 
 format: check-uv
 	@echo "$(GREEN)Formatting code...$(NC)"
