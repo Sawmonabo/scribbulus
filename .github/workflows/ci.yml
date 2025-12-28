@@ -97,3 +97,11 @@ jobs:
         globs: |
           **/*.md
           !.venv/**
+
+  shellcheck:
+    name: Shell Scripts (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run ShellCheck
+      run: shellcheck --severity=warning scripts/*.sh scripts/lib/*.sh
