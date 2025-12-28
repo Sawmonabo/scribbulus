@@ -9,6 +9,7 @@ from scribbulus.utils.formatter import (
     format_time,
     wrap_text,
 )
+from scribbulus.utils.logging import get_console, setup_logging
 from scribbulus.utils.progress import (
     ProgressCallback,
     ProgressConfig,
@@ -27,7 +28,9 @@ __all__ = [
     "format_diarized_segments",
     "format_simple_segments",
     "format_time",
+    "get_console",
     "progress_context",
     "progress_iterator",
+    "setup_logging",
     "wrap_text",
 ]

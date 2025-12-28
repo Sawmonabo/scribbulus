@@ -173,6 +173,73 @@ case "${OS_TYPE}" in
 esac
 
 # =============================================================================
+# Install libsndfile (required for soundfile audio backend)
+# =============================================================================
+
+install_libsndfile() {
+    log_step "Installing libsndfile for audio backend..."
+    case "${OS_TYPE}" in
+        macos)
+            if ! brew list libsndfile &>/dev/null; then
+                brew install libsndfile
+            else
+                log_info "libsndfile is already installed."
+            fi
+            ;;
+        linux|wsl)
+            case "${PKG_MANAGER}" in
+                apt)
+                    if ! dpkg -s libsndfile1 &>/dev/null 2>&1; then
+                        run_privileged apt install -y libsndfile1
+                    else
+                        log_info "libsndfile is already installed."
+                    fi
+                    ;;
+                dnf|yum)
+                    if ! rpm -q libsndfile &>/dev/null 2>&1; then
+                        run_privileged "${PKG_MANAGER}" install -y libsndfile
+                    else
+                        log_info "libsndfile is already installed."
+                    fi
+                    ;;
+                pacman)
+                    if ! pacman -Q libsndfile &>/dev/null 2>&1; then
+                        run_privileged pacman -S --noconfirm libsndfile
+                    else
+                        log_info "libsndfile is already installed."
+                    fi
+                    ;;
+                zypper)
+                    if ! rpm -q libsndfile &>/dev/null 2>&1; then
+                        run_privileged zypper install -y libsndfile
+                    else
+                        log_info "libsndfile is already installed."
+                    fi
+                    ;;
+                apk)
+                    if ! apk info -e libsndfile &>/dev/null 2>&1; then
+                        run_privileged apk add libsndfile
+                    else
+                        log_info "libsndfile is already installed."
+                    fi
+                    ;;
+                *)
+                    log_warn "Cannot auto-install libsndfile for ${PKG_MANAGER}."
+                    log_warn "Please install libsndfile manually for audio backend support."
+                    ;;
+            esac
+            ;;
+        windows)
+            # libsndfile is typically bundled with Python soundfile package on Windows
+            log_info "libsndfile will be bundled with Python soundfile package."
+            ;;
+    esac
+}
+
+# Install libsndfile after ffmpeg
+install_libsndfile
+
+# =============================================================================
 # Verify installation
 # =============================================================================
 

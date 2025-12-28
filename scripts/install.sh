@@ -94,6 +94,22 @@ install_python_package() {
     log_step "Installing scribbulus Python package..."
     uv sync
     uv pip install -e .
+
+    # Validate installation - ensure the package is importable
+    log_step "Validating installation..."
+    if ! uv run python -c "import scribbulus" 2>/dev/null; then
+        log_error "Installation validation failed: cannot import scribbulus"
+        log_error "Try: uv pip install -e . --force-reinstall"
+        exit 1
+    fi
+
+    # Validate CLI entrypoint
+    if ! uv run scribbulus --version >/dev/null 2>&1; then
+        log_error "CLI entrypoint validation failed: scribbulus command not working"
+        exit 1
+    fi
+
+    log_info "Installation validated successfully."
 }
 
 # =============================================================================

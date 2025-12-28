@@ -31,9 +31,11 @@ dependencies = [
   "click>=8.3.1",
   "faster-whisper>=1.2.1",
   "torch>=2.8.0,<2.9.0",
-  "torchaudio>=2.8.0,<2.9.0",  # Planned: future audio processing
-  "pydub>=0.25.1",  # Planned: future audio manipulation
-  "tqdm>=4.67.1"
+  "torchaudio>=2.8.0,<2.9.0",
+  "pydub>=0.25.1",
+  "tqdm>=4.67.1",
+  "soundfile>=0.13.0",  # Required: portable audio backend for torchaudio
+  "rich>=13.0.0"  # Pretty console output and logging
 ]
 
 [project.optional-dependencies]
@@ -74,8 +76,14 @@ test = [
 [tool.uv]
 default-groups = ["dev", "lint", "test"]
 
+[tool.hatch.build]
+only-packages = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/scribbulus"]
+
+[tool.hatch.build.targets.editable]
+dev-mode-dirs = ["src"]
 
 [tool.ruff]
 target-version = "py313"

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import sys
 import traceback
 from pathlib import Path
@@ -23,6 +22,7 @@ from scribbulus.utils.errors import (
     TranscriptionError,
     UnsupportedFormatError,
 )
+from scribbulus.utils.logging import setup_logging
 from scribbulus.utils.progress import create_stage_callback
 from scribbulus.utils.types import ComputeType, DeviceType
 
@@ -61,20 +61,6 @@ MODEL_CHOICES = [
     "distil-medium.en",
     "distil-small.en",
 ]
-
-
-def setup_logging(verbose: bool) -> None:
-    """
-    Configure logging based on verbosity.
-
-    :param verbose: Enable debug-level logging if True, warning-level if False.
-    """
-    level = logging.DEBUG if verbose else logging.WARNING
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(sys.stderr)],
-    )
 
 
 def write_output(

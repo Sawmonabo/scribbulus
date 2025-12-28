@@ -3,6 +3,7 @@
 import click
 
 from scribbulus.cli.transcribe import transcribe
+from scribbulus.transcription.audio_backend import configure_audio_backend
 
 
 @click.group(invoke_without_command=True)
@@ -14,6 +15,9 @@ def cli(ctx: click.Context) -> None:
 
     Use 'scribbulus COMMAND --help' for command-specific help.
     """
+    # Configure audio backend at app entry, before any subcommand runs
+    configure_audio_backend()
+
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 

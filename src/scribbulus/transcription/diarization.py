@@ -99,6 +99,13 @@ class SpeakerDiarizer:
         if not self.hf_token:
             raise HuggingFaceTokenError()
 
+        # Workaround for PyTorch 2.6+ weights_only=True default change
+        # PyTorch 2.6 changed torch.load() default from weights_only=False to True
+        # This breaks loading pyannote models which contain non-allowlisted types
+        # See: https://github.com/m-bain/whisperX/issues/1304
+        # This is safe because we're loading trusted HuggingFace pyannote models
+        os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+
         # Get DiarizationPipeline class from whisperx.diarize submodule
         # (raises DiarizationError if whisperx not installed)
         DiarizationPipeline = get_diarization_pipeline()  # noqa: N806
