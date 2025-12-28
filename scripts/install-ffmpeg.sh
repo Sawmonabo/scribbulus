@@ -51,21 +51,58 @@ parse_args "$@"
 log_success "=== FFmpeg Installer for Scribbulus ==="
 log_blank
 
-# Check if ffmpeg is already installed
-if has_command ffmpeg; then
-    log_info "FFmpeg is already installed:"
+# Show detected platform info
+log_step "Detected: ${OS_TYPE} with ${PKG_MANAGER} package manager"
+log_blank
+
+# =============================================================================
+# Dependency checking helpers
+# =============================================================================
+
+# Check if libsndfile is installed (platform-specific)
+is_libsndfile_installed() {
+    case "${OS_TYPE}" in
+        macos)
+            brew list libsndfile &>/dev/null 2>&1
+            ;;
+        linux|wsl)
+            case "${PKG_MANAGER}" in
+                apt)        dpkg -s libsndfile1 &>/dev/null 2>&1 ;;
+                dnf|yum|zypper) rpm -q libsndfile &>/dev/null 2>&1 ;;
+                pacman)     pacman -Q libsndfile &>/dev/null 2>&1 ;;
+                apk)        apk info -e libsndfile &>/dev/null 2>&1 ;;
+                *)          return 1 ;;
+            esac
+            ;;
+        windows)
+            return 0  # Bundled with Python soundfile package
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Check if all required dependencies are installed
+all_deps_installed() {
+    has_command ffmpeg && has_command ffprobe && is_libsndfile_installed
+}
+
+# Early exit if all dependencies present (unless --force)
+if all_deps_installed; then
+    log_success "All dependencies are already installed:"
     if [[ "${QUIET}" -eq 0 ]]; then
-        ffmpeg -version | head -1
+        log_info "  ffmpeg:    $(ffmpeg -version 2>&1 | head -1)"
+        log_info "  ffprobe:   available"
+        log_info "  libsndfile: available"
     fi
     if [[ "${FORCE}" -eq 0 ]]; then
+        log_blank
         log_info "Use --force to reinstall."
         exit 0
     fi
     log_warn "Force reinstall requested..."
 fi
-
-# Show detected platform info
-log_step "Detected: ${OS_TYPE} with ${PKG_MANAGER} package manager"
 log_blank
 
 # =============================================================================
@@ -177,60 +214,32 @@ esac
 # =============================================================================
 
 install_libsndfile() {
+    # Skip if already installed (unless --force)
+    if is_libsndfile_installed && [[ "${FORCE}" -eq 0 ]]; then
+        log_info "libsndfile is already installed."
+        return 0
+    fi
+
     log_step "Installing libsndfile for audio backend..."
     case "${OS_TYPE}" in
         macos)
-            if ! brew list libsndfile &>/dev/null; then
-                brew install libsndfile
-            else
-                log_info "libsndfile is already installed."
-            fi
+            brew install libsndfile
             ;;
         linux|wsl)
             case "${PKG_MANAGER}" in
-                apt)
-                    if ! dpkg -s libsndfile1 &>/dev/null 2>&1; then
-                        run_privileged apt install -y libsndfile1
-                    else
-                        log_info "libsndfile is already installed."
-                    fi
-                    ;;
-                dnf|yum)
-                    if ! rpm -q libsndfile &>/dev/null 2>&1; then
-                        run_privileged "${PKG_MANAGER}" install -y libsndfile
-                    else
-                        log_info "libsndfile is already installed."
-                    fi
-                    ;;
-                pacman)
-                    if ! pacman -Q libsndfile &>/dev/null 2>&1; then
-                        run_privileged pacman -S --noconfirm libsndfile
-                    else
-                        log_info "libsndfile is already installed."
-                    fi
-                    ;;
-                zypper)
-                    if ! rpm -q libsndfile &>/dev/null 2>&1; then
-                        run_privileged zypper install -y libsndfile
-                    else
-                        log_info "libsndfile is already installed."
-                    fi
-                    ;;
-                apk)
-                    if ! apk info -e libsndfile &>/dev/null 2>&1; then
-                        run_privileged apk add libsndfile
-                    else
-                        log_info "libsndfile is already installed."
-                    fi
-                    ;;
+                apt)        run_privileged apt install -y libsndfile1 ;;
+                dnf|yum)    run_privileged "${PKG_MANAGER}" install -y libsndfile ;;
+                pacman)     run_privileged pacman -S --noconfirm libsndfile ;;
+                zypper)     run_privileged zypper install -y libsndfile ;;
+                apk)        run_privileged apk add libsndfile ;;
                 *)
                     log_warn "Cannot auto-install libsndfile for ${PKG_MANAGER}."
                     log_warn "Please install libsndfile manually for audio backend support."
+                    return 1
                     ;;
             esac
             ;;
         windows)
-            # libsndfile is typically bundled with Python soundfile package on Windows
             log_info "libsndfile will be bundled with Python soundfile package."
             ;;
     esac
@@ -246,22 +255,33 @@ install_libsndfile
 log_blank
 log_step "Verifying installation..."
 
-if has_command ffmpeg; then
-    log_success "FFmpeg installed successfully!"
-    log_blank
-    if [[ "${QUIET}" -eq 0 ]]; then
-        ffmpeg -version | head -3
-    fi
-    log_blank
+VERIFY_FAILED=0
 
-    # Check for ffprobe
-    if has_command ffprobe; then
-        log_info "ffprobe is also available."
-    else
-        log_warn "Warning: ffprobe not found. Some features may not work."
+if has_command ffmpeg; then
+    log_success "ffmpeg: OK"
+    if [[ "${QUIET}" -eq 0 ]]; then
+        ffmpeg -version 2>&1 | head -1 | sed 's/^/    /'
     fi
 else
-    log_error "FFmpeg installation failed"
+    log_error "ffmpeg: FAILED"
+    VERIFY_FAILED=1
+fi
+
+if has_command ffprobe; then
+    log_success "ffprobe: OK"
+else
+    log_warn "ffprobe: MISSING (some features may not work)"
+fi
+
+if is_libsndfile_installed; then
+    log_success "libsndfile: OK"
+else
+    log_warn "libsndfile: MISSING (audio backend may not work)"
+fi
+
+if [[ "${VERIFY_FAILED}" -eq 1 ]]; then
+    log_blank
+    log_error "Installation verification failed"
     exit 1
 fi
 

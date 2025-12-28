@@ -1,5 +1,5 @@
 ---
-updated: 2025-12-20
+updated: 2025-12-28
 ---
 
 # Scribbulus Documentation
@@ -42,6 +42,8 @@ Technical research and analysis.
 - [Speech-to-Text Options](./research/speech-to-text-options.md) - STT comparison
 - [Diarization Guide](./research/diarization-guide.md) - Speaker diarization
 - [FFmpeg Audio Extraction](./research/ffmpeg-audio-extraction.md) - Audio extraction
+- [PyTorch Safe Loading](./research/pytorch-safe-loading.md) - weights_only compatibility
+- [TorchAudio Backends](./research/torchaudio-backends.md) - Audio backend selection
 
 ### [Task Tracking](./task/)
 
